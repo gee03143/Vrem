@@ -19,5 +19,11 @@ public:
 	
 protected:
 	virtual void BeginPlay() override;
-	
+
+	virtual void InitGameState() override;
+
+protected:
+
+	UPROPERTY(Config, EditAnywhere, Category="GameMode")
+	FPrimaryAssetId DefaultGameModeDefinition;	// 이 값은 일단 config에서 하드코딩 하는걸로, 한번 정하면 바뀌지 않을 값에 가까움
 };

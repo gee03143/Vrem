@@ -5,7 +5,6 @@
 #include "EnhancedInputSubsystems.h"
 #include "Vrem/VremLogChannels.h"
 #include "InputMappingContext.h"
-#include "Vrem/Character/VremCharacter.h"
 
 void AVremPlayerController::BeginPlay()
 {

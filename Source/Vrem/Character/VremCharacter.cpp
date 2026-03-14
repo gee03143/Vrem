@@ -5,11 +5,15 @@
 
 #include "InputAction.h"
 #include "EnhancedInputComponent.h"
+#include "VremPawnData.h"
 #include "Camera/CameraComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
+#include "GameFramework/GameStateBase.h"
 #include "GameFramework/SpringArmComponent.h"
 #include "Vrem/VremGameplayTags.h"
 #include "Vrem/VremLogChannels.h"
+#include "Vrem/GameMode/VremGameModeDefinition.h"
+#include "Vrem/GameMode/VremGameModeDefManager.h"
 #include "Vrem/Input/VremInputConfig.h"
 
 static TAutoConsoleVariable<int32> CVarDebugCharacterInput(
@@ -40,6 +44,36 @@ AVremCharacter::AVremCharacter()
 
 	FollowCamera->bUsePawnControlRotation = false;
 
+}
+
+void AVremCharacter::BeginPlay()
+{
+	Super::BeginPlay();
+
+	AGameStateBase* GS = GetWorld()->GetGameState<AGameStateBase>();
+	if (IsValid(GS))
+	{
+		UVremGameModeDefManager* GameModeManager = GS->GetComponentByClass<UVremGameModeDefManager>();
+		if (IsValid(GameModeManager))
+		{
+			GameModeDefinitionLoadedHandle = GameModeManager->OnGameModeDefinitionLoadedDelegate.AddUObject(this, &ThisClass::OnInputConfigLoaded);
+			
+			if (GameModeManager->IsGameModeDefinitionLoaded())
+			{
+				OnInputConfigLoaded(GameModeManager->GetGameModeDefinition());
+			}
+		}
+	}
+}
+
+void AVremCharacter::EndPlay(const EEndPlayReason::Type EndPlayReason)
+{
+	if (GameModeDefinitionLoadedHandle.IsValid())
+	{
+		GameModeDefinitionLoadedHandle.Reset();
+	}
+	
+	Super::EndPlay(EndPlayReason);
 }
 
 void AVremCharacter::Tick(float DeltaTime)
@@ -75,12 +109,68 @@ void AVremCharacter::Tick(float DeltaTime)
 	}
 }
 
+inline void AVremCharacter::OnInputConfigLoaded(const UVremGameModeDefinition* InGameModeDefinition)
+{
+	CurrentInputConfig = InGameModeDefinition->PawnData->InputConfig;	// TODO: 이부분은 개선 여지가 있을 것 같다, Character가 GameModeDefinition 전체를 알 필요는 없다.
+	
+	if (CurrentInputConfig.IsValid() == false)
+	{
+		UE_LOG(LogVremInput, Warning, TEXT("AVremCharacter::OnInputConfigLoaded InputConfig Is Invalid! NetRole : [%s]"), *GetNetRoleString(this));
+		return;
+	}
+
+	if (IsValid(InputComponent) == false)
+	{
+		UE_LOG(LogVremInput, Warning, TEXT("AVremCharacter::OnInputConfigLoaded InputComponent Is Invalid! NetRole : [%s]"), *GetNetRoleString(this));
+		return;
+	}
+
+	UEnhancedInputComponent* EIC = Cast<UEnhancedInputComponent>(InputComponent);
+	if (IsValid(EIC))
+	{
+		const UInputAction* MoveAction = CurrentInputConfig->FindInputActionByTag(FVremGameplayTags::Input_Move);
+		if (MoveAction != nullptr)
+		{
+			EIC->BindAction(MoveAction, ETriggerEvent::Triggered, this, &AVremCharacter::Move);
+		}
+
+		const UInputAction* JumpAction = CurrentInputConfig->FindInputActionByTag(FVremGameplayTags::Input_Jump);
+		if (JumpAction != nullptr)
+		{
+			EIC->BindAction(JumpAction, ETriggerEvent::Started, this, &AVremCharacter::StartJump);
+			EIC->BindAction(JumpAction, ETriggerEvent::Completed, this, &AVremCharacter::StopJump);
+		}
+
+		const UInputAction* TurnAction = CurrentInputConfig->FindInputActionByTag(FVremGameplayTags::Input_Look);
+		if (TurnAction != nullptr)
+		{
+			EIC->BindAction(TurnAction, ETriggerEvent::Triggered, this, &AVremCharacter::Look);
+		}
+
+		const UInputAction* AttackAction = CurrentInputConfig->FindInputActionByTag(FVremGameplayTags::Input_WeaponPrimary);
+		if (AttackAction != nullptr)
+		{
+			EIC->BindAction(AttackAction, ETriggerEvent::Triggered, this, &AVremCharacter::Attack_Temp);
+		}
+
+		const UInputAction* ToggleADSAction = CurrentInputConfig->FindInputActionByTag(FVremGameplayTags::Input_ToggleADS);
+		if (ToggleADSAction != nullptr)
+		{
+			EIC->BindAction(ToggleADSAction, ETriggerEvent::Completed, this, &AVremCharacter::ToggleADS);
+		}
+	}
+	else
+	{
+		UE_LOG(LogVremInput, Warning, TEXT("AVremCharacter::SetupPlayerInputComponent EnhancedInputComponent Is Invalid! NetRole : [%s]"), *GetNetRoleString(this));
+	}
+}
+
 // Called to bind functionality to input
 void AVremCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
 {
 	Super::SetupPlayerInputComponent(PlayerInputComponent);
 	
-	if (IsValid(DefaultInputConfig) == false)
+	if (CurrentInputConfig.IsValid() == false)
 	{
 		UE_LOG(LogVremInput, Warning, TEXT("AVremCharacter::SetupPlayerInputComponent InputConfig Is Invalid! NetRole : [%s]"), *GetNetRoleString(this));
 		return;
@@ -95,32 +185,32 @@ void AVremCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCompo
 	UEnhancedInputComponent* EIC = Cast<UEnhancedInputComponent>(InputComponent);
 	if (IsValid(EIC))
 	{
-		const UInputAction* MoveAction = DefaultInputConfig->FindInputActionByTag(FVremGameplayTags::Input_Move);
+		const UInputAction* MoveAction = CurrentInputConfig->FindInputActionByTag(FVremGameplayTags::Input_Move);
 		if (MoveAction != nullptr)
 		{
 			EIC->BindAction(MoveAction, ETriggerEvent::Triggered, this, &AVremCharacter::Move);
 		}
 
-		const UInputAction* JumpAction = DefaultInputConfig->FindInputActionByTag(FVremGameplayTags::Input_Jump);
+		const UInputAction* JumpAction = CurrentInputConfig->FindInputActionByTag(FVremGameplayTags::Input_Jump);
 		if (JumpAction != nullptr)
 		{
 			EIC->BindAction(JumpAction, ETriggerEvent::Started, this, &AVremCharacter::StartJump);
 			EIC->BindAction(JumpAction, ETriggerEvent::Completed, this, &AVremCharacter::StopJump);
 		}
 
-		const UInputAction* TurnAction = DefaultInputConfig->FindInputActionByTag(FVremGameplayTags::Input_Look);
+		const UInputAction* TurnAction = CurrentInputConfig->FindInputActionByTag(FVremGameplayTags::Input_Look);
 		if (TurnAction != nullptr)
 		{
 			EIC->BindAction(TurnAction, ETriggerEvent::Triggered, this, &AVremCharacter::Look);
 		}
 
-		const UInputAction* AttackAction = DefaultInputConfig->FindInputActionByTag(FVremGameplayTags::Input_WeaponPrimary);
+		const UInputAction* AttackAction = CurrentInputConfig->FindInputActionByTag(FVremGameplayTags::Input_WeaponPrimary);
 		if (AttackAction != nullptr)
 		{
 			EIC->BindAction(AttackAction, ETriggerEvent::Triggered, this, &AVremCharacter::Attack_Temp);
 		}
 
-		const UInputAction* ToggleADSAction = DefaultInputConfig->FindInputActionByTag(FVremGameplayTags::Input_ToggleADS);
+		const UInputAction* ToggleADSAction = CurrentInputConfig->FindInputActionByTag(FVremGameplayTags::Input_ToggleADS);
 		if (ToggleADSAction != nullptr)
 		{
 			EIC->BindAction(ToggleADSAction, ETriggerEvent::Completed, this, &AVremCharacter::ToggleADS);

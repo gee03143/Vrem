@@ -6,6 +6,7 @@
 #include "GameFramework/Character.h"
 #include "VremCharacter.generated.h"
 
+class UVremGameModeDefinition;
 class USpringArmComponent;
 class UCameraComponent;
 class UVremInputConfig;
@@ -20,6 +21,9 @@ public:
 	// Sets default values for this character's properties
 	AVremCharacter();
 
+	virtual void BeginPlay() override;
+	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
+	
 	virtual void Tick(float DeltaTime) override;
 
 #pragma region input
@@ -27,6 +31,8 @@ public:
 	// Called to bind functionality to input
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
 protected:
+	void OnInputConfigLoaded(const UVremGameModeDefinition* InGameModeDefinition);
+	
 	void Move(const FInputActionValue& Value);
 	void Look(const FInputActionValue& Value);
 	void StartJump(const FInputActionValue& Value);
@@ -36,8 +42,7 @@ protected:
 	void ToggleADS(const FInputActionValue& Value);	
 	
 protected:
-	UPROPERTY(EditDefaultsOnly, Category="Input")
-	TObjectPtr<UVremInputConfig> DefaultInputConfig;		// 임시... 나중에 Character 정보를 완전히 데이터로 분리하자
+	TSoftObjectPtr<UVremInputConfig> CurrentInputConfig;		// 임시... 나중에 Character 정보를 완전히 데이터로 분리하자
 #pragma endregion
 
 #pragma region camera
@@ -50,5 +55,7 @@ protected:
 #pragma endregion
 
 private:
+	FDelegateHandle GameModeDefinitionLoadedHandle;
+	
 	bool bIsADS = false;		// 임시... 추후 GameplayTag로 상태 관리할 것
 };
