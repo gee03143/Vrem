@@ -10,6 +10,8 @@ class UVremGameModeDefinition;
 class USpringArmComponent;
 class UCameraComponent;
 class UVremInputConfig;
+class UVremCameraSystem;
+class UVremCameraMode;
 struct FInputActionValue;
 
 UCLASS()
@@ -40,7 +42,8 @@ protected:
 
 	void Attack_Temp(const FInputActionValue& Value);		// 임시.. 아마 무기 기능같은곳에 들어가야할거같음, 추후 무기 프라이머리 기능으로 들어갈 것
 	void ToggleADS(const FInputActionValue& Value);	
-	
+
+	void TryBindInputByInputConfig();
 protected:
 	TSoftObjectPtr<UVremInputConfig> CurrentInputConfig;		// 임시... 나중에 Character 정보를 완전히 데이터로 분리하자
 #pragma endregion
@@ -52,6 +55,15 @@ protected:
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly)
 	TObjectPtr<UCameraComponent> FollowCamera;
+	
+	UPROPERTY(EditAnywhere, BlueprintReadOnly)
+	TObjectPtr<UVremCameraSystem> CameraSystem;
+
+	UPROPERTY(EditDefaultsOnly)
+	TObjectPtr<UVremCameraMode> DefaultCameraMode;
+
+	UPROPERTY(EditDefaultsOnly)
+	TObjectPtr<UVremCameraMode> ADSCameraMode;
 #pragma endregion
 
 private:
