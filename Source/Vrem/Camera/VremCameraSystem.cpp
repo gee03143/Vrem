@@ -28,6 +28,14 @@ const FVremCameraState& UVremCameraSystem::GetBlendedCameraState()
 			10.f
 		);
 
+	CurrentCameraState.TargetSocketOffset =
+		FMath::VInterpTo(
+			CurrentCameraState.TargetSocketOffset,
+			TargetCameraMode->TargetSocketOffset,
+			GetWorld()->GetDeltaSeconds(),
+			10.f
+		);
+
 	return CurrentCameraState;
 }
 

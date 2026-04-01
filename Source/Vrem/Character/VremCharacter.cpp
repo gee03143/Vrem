@@ -18,10 +18,21 @@
 #include "Vrem/Camera/VremCameraMode.h"
 #include "Vrem/Input/VremInputConfig.h"
 
+// temp
+#include "Components/ArrowComponent.h"
+
 static TAutoConsoleVariable<int32> CVarDebugCharacterInput(
 	TEXT("vrem.DebugCharacterInput"),
 	0,
 	TEXT("Enable Character Input Debug\n")
+	TEXT("0: Off\n")
+	TEXT("1: On"),
+	ECVF_Cheat);
+
+static TAutoConsoleVariable<int32> CVarDebugCharacterShooting(
+	TEXT("vrem.DebugCharacterShooting"),
+	0,
+	TEXT("Enable Character Shooting Debug\n")
 	TEXT("0: Off\n")
 	TEXT("1: On"),
 	ECVF_Cheat);
@@ -48,6 +59,13 @@ AVremCharacter::AVremCharacter()
 
 	CameraSystem = CreateDefaultSubobject<UVremCameraSystem>(TEXT("CameraSystem"));
 
+	// temp code
+	{
+		Muzzle_Temp = CreateDefaultSubobject<UArrowComponent>(TEXT("Muzzle"));
+		Muzzle_Temp->SetupAttachment(GetMesh());
+		Muzzle_Temp->SetRelativeLocation(FVector(0.f, 0.f, 148.f));
+		Muzzle_Temp->SetRelativeRotation(FRotator(0.f, 0.f, 90.f));
+	}
 }
 
 void AVremCharacter::BeginPlay()
@@ -105,6 +123,7 @@ void AVremCharacter::Tick(float DeltaTime)
 			if (IsValid(SpringArm))
 			{
 				SpringArm->TargetArmLength = BlendedCameraState.TargetArmLength;
+				SpringArm->SocketOffset = BlendedCameraState.TargetSocketOffset;
 			}
 		}
 		else
@@ -226,6 +245,73 @@ void AVremCharacter::Attack_Temp(const FInputActionValue& Value)
 	}
 	
 	UE_LOG(LogVremInput, Warning, TEXT("AVremCharacter::Attack_Temp NetRole : [%s]"), *GetNetRoleString(this));
+
+	const bool bShowDebug = CVarDebugCharacterShooting.GetValueOnGameThread() > 0;
+
+	if (bIsADS)
+	{
+		// range attack
+		
+		FVector WorldLocation;
+		FRotator WorldDirection;
+		GetController()->GetPlayerViewPoint(WorldLocation, WorldDirection);
+
+		FVector ViewpointLinetraceEnd = WorldLocation + WorldDirection.Vector() * 10000.f;
+
+		// linetrace from viewpoint
+		FHitResult ViewHit;
+		FCollisionQueryParams Params;
+		Params.AddIgnoredActor(this);
+
+		bool bHitFromViewpoint = GetWorld()->LineTraceSingleByChannel(
+			ViewHit,
+			WorldLocation,
+			ViewpointLinetraceEnd,
+			ECC_Visibility,
+			Params
+		);
+
+		FVector ViewportLinetraceEndPoint = bHitFromViewpoint ? ViewHit.Location : ViewpointLinetraceEnd;
+
+		if (bShowDebug)
+		{ 
+			DrawDebugLine(GetWorld(), WorldLocation, ViewportLinetraceEndPoint, bHitFromViewpoint ? FColor::Green : FColor::Red, false, 1.f, 0, 1.f);
+		}
+
+		// linetrace from muzzle
+		FHitResult MuzzleHit;
+		FVector MuzzleLocation = Muzzle_Temp->GetComponentLocation();
+		FVector ShootDirection = (ViewportLinetraceEndPoint - MuzzleLocation).GetSafeNormal();
+		FVector MuzzleEnd = MuzzleLocation + ShootDirection * 10000.f;
+
+		bool bHitFromMuzzle = GetWorld()->LineTraceSingleByChannel(
+			MuzzleHit,
+			MuzzleLocation,
+			MuzzleEnd,
+			ECC_Visibility,
+			Params
+		);
+
+		if (bHitFromMuzzle)
+		{
+			if (bShowDebug)
+			{ 
+				DrawDebugLine(GetWorld(), MuzzleLocation, MuzzleHit.Location, FColor::Green, false, 1.f, 0, 1.f);
+				DrawDebugPoint(GetWorld(), MuzzleHit.Location, 10.f, FColor::Red, false, 1.f);
+			}
+		}
+		else
+		{
+			if (bShowDebug)
+			{ 
+				DrawDebugLine(GetWorld(), MuzzleLocation, MuzzleEnd, FColor::Red, false, 1.f, 0, 1.f);
+			}
+		}
+	}
+	else
+	{
+		// melee attack
+	}
 }
 
 void AVremCharacter::ToggleADS(const FInputActionValue& Value)

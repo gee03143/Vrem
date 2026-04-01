@@ -11,6 +11,7 @@ struct FVremCameraState
 {
 	float TargetFOV;
 	float TargetArmLength;
+	FVector TargetSocketOffset;
 };
 
 UCLASS()
@@ -24,4 +25,7 @@ public:
 
 	UPROPERTY(EditDefaultsOnly)
 	float TargetArmLength;
+
+	UPROPERTY(EditDefaultsOnly)
+	FVector TargetSocketOffset;
 };
