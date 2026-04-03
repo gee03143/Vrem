@@ -16,6 +16,7 @@ DECLARE_LOG_CATEGORY_EXTERN(LogVrem, Log, All);
 DECLARE_LOG_CATEGORY_EXTERN(LogVremTemp, Log, All);
 DECLARE_LOG_CATEGORY_EXTERN(LogVremInput, Log, All);
 DECLARE_LOG_CATEGORY_EXTERN(LogVremAssetManager, Log, All);
+DECLARE_LOG_CATEGORY_EXTERN(LogVremInventory, Log, All);
 
 inline FString GetNetModeString(const UWorld* WorldContext)
 {

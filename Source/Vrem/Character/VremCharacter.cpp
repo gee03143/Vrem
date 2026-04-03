@@ -17,6 +17,7 @@
 #include "Vrem/Camera/VremCameraSystem.h"
 #include "Vrem/Camera/VremCameraMode.h"
 #include "Vrem/Input/VremInputConfig.h"
+#include "Vrem/Inventory/VremInventoryComponent.h"
 
 // temp
 #include "Components/ArrowComponent.h"
@@ -58,6 +59,8 @@ AVremCharacter::AVremCharacter()
 	FollowCamera->bUsePawnControlRotation = false;
 
 	CameraSystem = CreateDefaultSubobject<UVremCameraSystem>(TEXT("CameraSystem"));
+
+	InventoryComponent = CreateDefaultSubobject<UVremInventoryComponent>(TEXT("InventoryComponent"));
 
 	// temp code
 	{

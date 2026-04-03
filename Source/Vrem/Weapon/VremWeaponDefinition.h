@@ -11,7 +11,7 @@ class UAnimInstance;
  * 
  */
 UCLASS()
-class VREM_API UVremWeaponDefinition : public UDataAsset
+class VREM_API UVremWeaponDefinition : public UPrimaryDataAsset
 {
 	GENERATED_BODY()
 	

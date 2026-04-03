@@ -4,6 +4,7 @@
 #include "VremInventoryComponent.h"
 #include "Vrem/Weapon/VremWeaponDefinition.h"
 #include "Net/UnrealNetwork.h"
+#include "Vrem/VremLogChannels.h"
 
 // Sets default values for this component's properties
 UVremInventoryComponent::UVremInventoryComponent()
@@ -34,6 +35,8 @@ void UVremInventoryComponent::AddWeaponToInventory(const FPrimaryAssetId& Weapon
 
 	InventoryItems.AddEntry(WeaponToAdd);
     OnInventoryChanged.Broadcast();
+
+	UE_LOG(LogVremInventory, Warning, TEXT("%s\nNetMode : %s"), *InventoryItems.ToString(), *GetNetModeString(GetWorld()));
 }
 
 void UVremInventoryComponent::RemoveWeaponFromInventory(const FPrimaryAssetId& WeaponToRemove)
@@ -43,6 +46,8 @@ void UVremInventoryComponent::RemoveWeaponFromInventory(const FPrimaryAssetId& W
 
 	InventoryItems.RemoveEntry(WeaponToRemove);
 	OnInventoryChanged.Broadcast();
+
+	UE_LOG(LogVremInventory, Warning, TEXT("%s\nNetMode : %s"), *InventoryItems.ToString(), *GetNetModeString(GetWorld()));
 }
 
 void UVremInventoryComponent::InitializeDefaultItems()
@@ -60,4 +65,6 @@ void UVremInventoryComponent::InitializeDefaultItems()
 void UVremInventoryComponent::OnRep_InventoryItems()
 {
 	OnInventoryChanged.Broadcast();
+
+	UE_LOG(LogVremInventory, Warning, TEXT("%s\nNetMode : %s"), *InventoryItems.ToString(), *GetNetModeString(GetWorld()));
 }

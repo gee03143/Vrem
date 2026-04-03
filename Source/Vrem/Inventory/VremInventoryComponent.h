@@ -19,6 +19,11 @@ struct FInventoryEntry : public FFastArraySerializerItem
 
     UPROPERTY()
     int32 Count;
+
+	FString ToString() const
+	{
+		return FString::Printf(TEXT("ItemId: %s, Count: %d"), *ItemId.ToString(), Count);
+	}
 };
 
 USTRUCT()
@@ -77,6 +82,19 @@ struct FInventoryList : public FFastArraySerializer
 				return;
 			}
 		}
+	}
+
+	FString ToString() const
+	{
+		FString Result;
+		Result += FString::Printf(TEXT("Num Entries - %d\n"), Entries.Num());
+
+		for (const FInventoryEntry& Entry : Entries)
+		{
+			Result += FString::Printf(TEXT(" - %s\n"), *Entry.ToString());
+		}
+
+		return Result;
 	}
 
     bool NetDeltaSerialize(FNetDeltaSerializeInfo& DeltaParams)

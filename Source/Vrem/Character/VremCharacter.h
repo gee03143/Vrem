@@ -12,6 +12,7 @@ class UCameraComponent;
 class UVremInputConfig;
 class UVremCameraSystem;
 class UVremCameraMode;
+class UVremInventoryComponent;
 struct FInputActionValue;
 
 UCLASS()
@@ -65,6 +66,13 @@ protected:
 	UPROPERTY(EditDefaultsOnly)
 	TObjectPtr<UVremCameraMode> ADSCameraMode;
 #pragma endregion
+
+#pragma region weaponsystem
+protected:
+	UPROPERTY(EditAnywhere, BlueprintReadOnly)
+	TObjectPtr<UVremInventoryComponent> InventoryComponent;
+
+#pragma endregion weaponsystem
 
 #pragma region temp
 protected:
