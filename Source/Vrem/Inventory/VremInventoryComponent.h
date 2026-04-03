@@ -7,7 +7,9 @@
 #include "Net/Serialization/FastArraySerializer.h"
 #include "VremInventoryComponent.generated.h"
 
-class UVremWeaponDefinition;
+class UVremItemDefinition;
+class UVremItemInstance;
+class UVremInventoryComponent;
 
 USTRUCT()
 struct FInventoryEntry : public FFastArraySerializerItem
@@ -20,9 +22,16 @@ struct FInventoryEntry : public FFastArraySerializerItem
     UPROPERTY()
     int32 Count;
 
+	UVremItemInstance* ItemInstance;
+
 	FString ToString() const
 	{
 		return FString::Printf(TEXT("ItemId: %s, Count: %d"), *ItemId.ToString(), Count);
+	}
+
+	bool operator==(const FInventoryEntry& Other) const
+	{
+		return ItemId == Other.ItemId;
 	}
 };
 
@@ -31,8 +40,7 @@ struct FInventoryList : public FFastArraySerializer
 {
     GENERATED_BODY()
 
-    UPROPERTY()
-    TArray<FInventoryEntry> Entries;
+	void SetOwner(UVremInventoryComponent* InOwner);
 
 	FInventoryEntry* GetEntryFromId(const FPrimaryAssetId& WeaponToAdd)
 	{
@@ -45,44 +53,8 @@ struct FInventoryList : public FFastArraySerializer
 		return FoundEntry;
 	}
 
-	void AddEntry(const FPrimaryAssetId& WeaponToAdd)
-	{
-		FInventoryEntry* FoundEntry = GetEntryFromId(WeaponToAdd);
-		if (FoundEntry)
-		{
-			FoundEntry->Count++;
-			MarkItemDirty(*FoundEntry);
-		}
-		else
-		{
-			FInventoryEntry& NewEntry = Entries.Emplace_GetRef();
-			NewEntry.ItemId = WeaponToAdd;
-			NewEntry.Count = 1;
-
-			MarkItemDirty(NewEntry);
-		}
-	}
-
-	void RemoveEntry(const FPrimaryAssetId& WeaponToRemove)
-	{
-		for (int32 i = 0; i < Entries.Num(); ++i)
-		{
-			if (Entries[i].ItemId == WeaponToRemove)
-			{
-				Entries[i].Count--;
-				if (Entries[i].Count <= 0)
-				{
-					Entries.RemoveAt(i);
-					MarkArrayDirty();
-				}
-				else
-				{
-					MarkItemDirty(Entries[i]);
-				}
-				return;
-			}
-		}
-	}
+	void AddEntry(const FPrimaryAssetId& ItemToAdd);
+	void RemoveEntry(const FPrimaryAssetId& ItemToRemove);
 
 	FString ToString() const
 	{
@@ -97,10 +69,22 @@ struct FInventoryList : public FFastArraySerializer
 		return Result;
 	}
 
+	void PostReplicatedAdd(const TArrayView<int32> AddedIndices, int32 FinalSize);
+	void PostReplicatedChange(const TArrayView<int32> ChangedIndices, int32 FinalSize);
+
+	void CreateInstanceForEntry(FInventoryEntry& Entry);
+
     bool NetDeltaSerialize(FNetDeltaSerializeInfo& DeltaParams)
     {
         return FastArrayDeltaSerialize<FInventoryEntry, FInventoryList>(Entries, DeltaParams, *this);
     }
+
+private:
+    UPROPERTY()
+    TArray<FInventoryEntry> Entries;
+
+	UVremInventoryComponent* OwnerComponent = nullptr;
+	TArray<FInventoryEntry> PendingEntriesForCreateInstance;
 };
 
 template<>
@@ -126,8 +110,8 @@ public:
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 
 public:
-	void AddWeaponToInventory(const FPrimaryAssetId& WeaponToAdd);
-	void RemoveWeaponFromInventory(const FPrimaryAssetId& WeaponToRemove);
+	void AddItemToInventory(const FPrimaryAssetId& ItemToAdd);
+	void RemoveItemFromInventory(const FPrimaryAssetId& ItemToRemove);
 
 protected:
 	void InitializeDefaultItems();
@@ -141,7 +125,7 @@ protected:
 
 
 	UPROPERTY(EditDefaultsOnly)
-	TArray<UVremWeaponDefinition*> DefaultWeaponDefinitions; 
+	TArray<UVremItemDefinition*> DefaultItemDefinitions; 
 
 private:
 	UPROPERTY(ReplicatedUsing = OnRep_InventoryItems)

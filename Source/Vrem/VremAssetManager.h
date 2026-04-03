@@ -8,6 +8,7 @@
 #include "Misc/AssertionMacros.h"
 #include "VremAssetManager.generated.h"
 
+class UVremItemDefinition;
 /**
  * 
  */
@@ -18,7 +19,8 @@ class VREM_API UVremAssetManager : public UAssetManager
 	
 public:
 	static UVremAssetManager& Get();
-	
+	UVremItemDefinition* GetItemDefinition(const FPrimaryAssetId& Id);
+
 	template<typename T>
 	TSharedPtr<FStreamableHandle> LoadAssetAsync(const TSoftObjectPtr<T>& AssetPtr, TFunction<void(T*)> OnLoaded);
 
