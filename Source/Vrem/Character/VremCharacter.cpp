@@ -18,6 +18,7 @@
 #include "Vrem/Camera/VremCameraMode.h"
 #include "Vrem/Input/VremInputConfig.h"
 #include "Vrem/Inventory/VremInventoryComponent.h"
+#include "Vrem/Equipment/VremEquipmentComponent.h"
 
 // temp
 #include "Components/ArrowComponent.h"
@@ -62,6 +63,7 @@ AVremCharacter::AVremCharacter()
 
 	InventoryComponent = CreateDefaultSubobject<UVremInventoryComponent>(TEXT("InventoryComponent"));
 
+	EquipmentComponent = CreateDefaultSubobject<UVremEquipmentComponent>(TEXT("EquipmentComponent"));
 	// temp code
 	{
 		Muzzle_Temp = CreateDefaultSubobject<UArrowComponent>(TEXT("Muzzle"));

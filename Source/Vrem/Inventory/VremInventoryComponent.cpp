@@ -5,8 +5,11 @@
 #include "Vrem/Inventory/VremItemDefinition.h"
 #include "Net/UnrealNetwork.h"
 #include "Vrem/VremLogChannels.h"
-#include "VremItemDefinition.h"
 #include "Vrem/VremAssetManager.h"
+
+// temp...
+#include "Vrem/Equipment/VremEquipmentDefinition.h"
+#include "Vrem/Equipment/VremEquipmentComponent.h"
 
 
 // =======================================
@@ -48,10 +51,7 @@ void FInventoryList::AddEntry(const FPrimaryAssetId& ItemToAdd)
 			NewEntry.ItemId = ItemToAdd;
 			NewEntry.Count = 1;
 
-			NewEntry.ItemInstance = NewObject<UVremItemInstance>(OwnerComponent);
-			NewEntry.ItemInstance->OnItemCreated(ItemDef);
-
-			MarkItemDirty(NewEntry);
+			CreateInstanceForEntry(NewEntry);
 		}
 	}
 }
@@ -133,6 +133,30 @@ void FInventoryList::CreateInstanceForEntry(FInventoryEntry& Entry)
 	{
 		Entry.ItemInstance = NewObject<UVremItemInstance>(OwnerComponent);
 		Entry.ItemInstance->OnItemCreated(ItemDef);
+
+		// temp code...
+		{
+
+			if (OwnerComponent->GetOwner()->HasAuthority())
+			{
+				UItemFragment_Equipment* EquipmentFragment = Entry.ItemInstance->FindFragment<UItemFragment_Equipment>();
+				if (IsValid(EquipmentFragment))
+				{
+					UVremEquipmentComponent* EquipmentComponent = OwnerComponent->GetOwner()->GetComponentByClass<UVremEquipmentComponent>();
+					EquipmentComponent->TryEquipItem(EquipmentFragment->GetEquipmentDefinition());
+				}
+				else
+				{
+					UE_LOG(LogVremInventory, Warning, TEXT("CreateInstanceForEntry cannot find EquipmentFragment"));
+				}
+			}
+		}
+
+		MarkItemDirty(Entry);
+	}
+	else
+	{
+		UE_LOG(LogVremInventory, Warning, TEXT("CreateInstanceForEntry ItemDef is nullptr"));
 	}
 }
 
@@ -162,21 +186,21 @@ void UVremInventoryComponent::GetLifetimeReplicatedProps(TArray<FLifetimePropert
 	DOREPLIFETIME_CONDITION(UVremInventoryComponent, InventoryItems, COND_OwnerOnly);
 }
 
-void UVremInventoryComponent::AddItemToInventory(const FPrimaryAssetId& ItemToAdd)
+void UVremInventoryComponent::AddItemToInventory(const UVremItemDefinition* ItemToAdd)
 {
     check(IsValid(GetOwner()));
     check(GetOwner()->HasAuthority());
 
-	InventoryItems.AddEntry(ItemToAdd);
+	InventoryItems.AddEntry(ItemToAdd->GetPrimaryAssetId());
     OnInventoryChanged.Broadcast();
 }
 
-void UVremInventoryComponent::RemoveItemFromInventory(const FPrimaryAssetId& ItemToRemove)
+void UVremInventoryComponent::RemoveItemFromInventory(const UVremItemDefinition* ItemToRemove)
 {
 	check(IsValid(GetOwner()));
 	check(GetOwner()->HasAuthority());
 
-	InventoryItems.RemoveEntry(ItemToRemove);
+	InventoryItems.RemoveEntry(ItemToRemove->GetPrimaryAssetId());
 	OnInventoryChanged.Broadcast();
 }
 
@@ -187,8 +211,7 @@ void UVremInventoryComponent::InitializeDefaultItems()
 
 	for (const UVremItemDefinition* Def : DefaultItemDefinitions)
 	{
-		const FPrimaryAssetId& ItemId = Def->GetPrimaryAssetId();
-		AddItemToInventory(ItemId);
+		AddItemToInventory(Def);
 	}
 }
 

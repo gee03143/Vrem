@@ -110,8 +110,8 @@ public:
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 
 public:
-	void AddItemToInventory(const FPrimaryAssetId& ItemToAdd);
-	void RemoveItemFromInventory(const FPrimaryAssetId& ItemToRemove);
+	void AddItemToInventory(const UVremItemDefinition* ItemToAdd);
+	void RemoveItemFromInventory(const UVremItemDefinition* ItemToRemove);
 
 protected:
 	void InitializeDefaultItems();
@@ -122,7 +122,6 @@ protected:
 protected:
 	DECLARE_MULTICAST_DELEGATE(FOnInventoryChanged);
 	FOnInventoryChanged OnInventoryChanged;
-
 
 	UPROPERTY(EditDefaultsOnly)
 	TArray<UVremItemDefinition*> DefaultItemDefinitions; 

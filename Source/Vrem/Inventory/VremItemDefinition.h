@@ -19,19 +19,6 @@ public:
 };
 
 UCLASS()
-class UItemFragment_Equipment : public UItemFragment
-{
-    GENERATED_BODY()
-
-protected:
-	UPROPERTY(EditDefaultsOnly)
-	TSoftClassPtr<AActor> WeaponActorClass;
-
-	UPROPERTY(EditDefaultsOnly)
-    TSoftClassPtr<UAnimInstance> AnimLayerClass;
-};
-
-UCLASS()
 class UItemFragment_Dummy : public UItemFragment
 {
     GENERATED_BODY()
@@ -75,15 +62,12 @@ public:
 protected:
     UPROPERTY()
     UVremItemDefinition* ItemDef;
-
-    UPROPERTY()
-    TArray<UItemFragment*> InstanceFragments;
 };
 
 template<typename T>
 T* UVremItemInstance::FindFragment() const
 {
-	for (UItemFragment* Fragment : InstanceFragments)
+	for (UItemFragment* Fragment : ItemDef->Fragments)
 	{
 		if (T* Typed = Cast<T>(Fragment))
 		{

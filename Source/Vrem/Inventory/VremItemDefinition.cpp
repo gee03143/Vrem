@@ -30,18 +30,18 @@ void UVremItemInstance::OnItemCreated(UVremItemDefinition* InItemDefinition)
 	{
 		if (Fragment)
 		{
-			UItemFragment* NewFragment = DuplicateObject<UItemFragment>(Fragment, this);
-
-			InstanceFragments.Add(NewFragment);
-			NewFragment->OnItemCreated(this);
+			Fragment->OnItemCreated(this);
 		}
 	}
 }
 
 void UVremItemInstance::OnItemRemoved()
 {
-	for (UItemFragment* Fragment : InstanceFragments)
+	for (UItemFragment* Fragment : ItemDef->Fragments)
 	{
-		Fragment->OnItemRemoved(this);
+		if (Fragment)
+		{
+			Fragment->OnItemCreated(this);
+		}
 	}
 }

@@ -13,6 +13,7 @@ class UVremInputConfig;
 class UVremCameraSystem;
 class UVremCameraMode;
 class UVremInventoryComponent;
+class UVremEquipmentComponent;
 struct FInputActionValue;
 
 UCLASS()
@@ -72,6 +73,8 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly)
 	TObjectPtr<UVremInventoryComponent> InventoryComponent;
 
+	UPROPERTY(EditAnywhere, BlueprintReadOnly)
+	TObjectPtr<UVremEquipmentComponent> EquipmentComponent;
 #pragma endregion weaponsystem
 
 #pragma region temp
