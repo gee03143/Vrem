@@ -19,6 +19,8 @@
 #include "Vrem/Input/VremInputConfig.h"
 #include "Vrem/Inventory/VremInventoryComponent.h"
 #include "Vrem/Equipment/VremEquipmentComponent.h"
+#include "Vrem/Equipment/VremEquipmentDefinition.h"
+#include "Vrem/Animation/VremAnimInstance.h"
 
 // temp
 #include "Components/ArrowComponent.h"
@@ -98,6 +100,16 @@ void AVremCharacter::BeginPlay()
 	{
 		CameraSystem->SetTargetCameraMode(DefaultCameraMode);
 	}
+
+	if (IsValid(InventoryComponent))
+	{
+		InventoryComponent->InitializeFromOwner();
+	}
+
+	if (IsValid(EquipmentComponent))
+	{
+		EquipmentComponent->InitializeFromOwner();
+	}
 }
 
 void AVremCharacter::EndPlay(const EEndPlayReason::Type EndPlayReason)
@@ -108,6 +120,18 @@ void AVremCharacter::EndPlay(const EEndPlayReason::Type EndPlayReason)
 	}
 	
 	Super::EndPlay(EndPlayReason);
+}
+
+void AVremCharacter::PostInitializeComponents()
+{
+	Super::PostInitializeComponents();
+	
+	if (IsValid(EquipmentComponent) && GetNetMode() != NM_DedicatedServer)
+	{
+		UE_LOG(LogVremEquipment, Warning, TEXT("AVremCharacter::BeginPlay Event Binded"));
+		EquipmentComponent->OnEquipmenntAttached.AddUObject(this, &ThisClass::OnEquipmentActorAttached);
+		EquipmentComponent->OnEquipmenntDetached.AddUObject(this, &ThisClass::OnEquipmentActorDetached);
+	}
 }
 
 void AVremCharacter::Tick(float DeltaTime)
@@ -383,5 +407,57 @@ void AVremCharacter::TryBindInputByInputConfig()
 	else
 	{
 		UE_LOG(LogVremInput, Warning, TEXT("AVremCharacter::SetupPlayerInputComponent EnhancedInputComponent Is Invalid! NetRole : [%s]"), *GetNetRoleString(this));
+	}
+}
+
+void AVremCharacter::OnEquipmentActorAttached(const UVremEquipmentDefinition* EquipmentDefinition)
+{
+	if (IsValid(EquipmentDefinition) == false)
+	{
+		UE_LOG(LogVremEquipment, Warning, TEXT("AVremCharacter::OnEquipmentActorAttached EquipmentDefinition is nullptr"));
+		return;
+	}
+
+	if (EquipmentDefinition->AnimLayerClass == nullptr)
+	{
+		UE_LOG(LogVremEquipment, Warning, TEXT("AVremCharacter::OnEquipmentActorAttached AnimLayerClass is nullptr"));
+		return;
+	}
+
+	UVremAnimInstance* AnimInstance = Cast<UVremAnimInstance>(GetMesh()->GetAnimInstance());
+	if (IsValid(AnimInstance) == false)
+	{
+		UE_LOG(LogVremEquipment, Warning, TEXT("AVremCharacter::OnEquipmentActorAttached AnimInstance is nullptr"));
+		return;
+	}
+
+	UE_LOG(LogVremEquipment, Warning, TEXT("AVremCharacter::OnEquipmentActorAttached LinkAnimLayer : [%s]"), *EquipmentDefinition->AnimLayerClass->GetName());
+	AnimInstance->SetWeaponAnimLayer(EquipmentDefinition->AnimLayerClass);
+}
+
+void AVremCharacter::OnEquipmentActorDetached(const UVremEquipmentDefinition* EquipmentDefinition)
+{
+	if (IsValid(EquipmentDefinition) == false)
+	{
+		UE_LOG(LogVremEquipment, Warning, TEXT("AVremCharacter::OnEquipmentActorDetached EquipmentDefinition is nullptr"));
+		return;
+	}
+
+	if (EquipmentDefinition->AnimLayerClass == nullptr)
+	{
+		UE_LOG(LogVremEquipment, Warning, TEXT("AVremCharacter::OnEquipmentActorDetached AnimLayerClass is nullptr"));
+		return;
+	}
+
+	UVremAnimInstance* AnimInstance = Cast<UVremAnimInstance>(GetMesh()->GetAnimInstance());
+	if (IsValid(AnimInstance) == false)
+	{
+		UE_LOG(LogVremEquipment, Warning, TEXT("AVremCharacter::OnEquipmentActorDetached AnimInstance is nullptr"));
+		return;
+	}
+
+	if (AnimInstance->GetCurrentLayer() != EquipmentDefinition->AnimLayerClass)
+	{
+		AnimInstance->SetWeaponAnimLayer(nullptr);
 	}
 }

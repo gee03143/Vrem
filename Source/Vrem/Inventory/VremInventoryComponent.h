@@ -105,7 +105,7 @@ public:
 	// Sets default values for this component's properties
 	UVremInventoryComponent();
 
-	void BeginPlay() override;
+	void InitializeFromOwner();
 
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 

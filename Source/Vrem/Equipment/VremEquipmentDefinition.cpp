@@ -23,7 +23,7 @@ void UVremEquipmentInstance::OnItemCreated(UVremEquipmentDefinition* InEquipment
 
 void UVremEquipmentInstance::OnItemRemoved()
 {
-
+	RequestRemoveActor();
 }
 
 void UVremEquipmentInstance::RequestAttach(AActor* ParentActor)

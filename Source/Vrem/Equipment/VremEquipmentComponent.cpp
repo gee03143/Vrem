@@ -151,16 +151,14 @@ UVremEquipmentComponent::UVremEquipmentComponent()
 	SetIsReplicatedByDefault(true);
 }
 
-void UVremEquipmentComponent::BeginPlay()
-{
-	Super::BeginPlay();
-
-	EquipmentList.SetOwner(this);
-}
-
 void UVremEquipmentComponent::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
 {
 	DOREPLIFETIME(UVremEquipmentComponent, EquipmentList);
+}
+
+void UVremEquipmentComponent::InitializeFromOwner()
+{
+	EquipmentList.SetOwner(this);
 }
 
 void UVremEquipmentComponent::TryEquipItem(const UVremEquipmentDefinition* ItemToEquip)
@@ -170,6 +168,12 @@ void UVremEquipmentComponent::TryEquipItem(const UVremEquipmentDefinition* ItemT
 
 	const FSoftObjectPath SoftPath(ItemToEquip);
 	EquipmentList.AddEntry(SoftPath.GetAssetPath());
+
+	if (ItemToEquip->AnimLayerClass)
+	{ 
+		UE_LOG(LogVremEquipment, Warning, TEXT("UVremEquipmentComponent::TryEquipItem"));
+		OnEquipmenntAttached.Broadcast(ItemToEquip);
+	}
 }
 
 void UVremEquipmentComponent::TryUnequipItem(const UVremEquipmentDefinition* ItemToUnequip)
@@ -178,7 +182,12 @@ void UVremEquipmentComponent::TryUnequipItem(const UVremEquipmentDefinition* Ite
 	check(GetOwner()->HasAuthority());
 
 	const FSoftObjectPath SoftPath(ItemToUnequip);
-	EquipmentList.AddEntry(SoftPath.GetAssetPath());
+	EquipmentList.RemoveEntry(SoftPath.GetAssetPath());
+
+	if (ItemToUnequip->AnimLayerClass)
+	{
+		OnEquipmenntDetached.Broadcast(ItemToUnequip);
+	}
 }
 
 void UVremEquipmentComponent::OnRep_EquipmentList()

@@ -168,13 +168,11 @@ UVremInventoryComponent::UVremInventoryComponent()
 	SetIsReplicatedByDefault(true);
 }
 
-void UVremInventoryComponent::BeginPlay()
+void UVremInventoryComponent::InitializeFromOwner()
 {
-	Super::BeginPlay();
-
 	InventoryItems.SetOwner(this);
 	if (IsValid(GetOwner()) && GetOwner()->HasAuthority())
-	{ 
+	{
 		InitializeDefaultItems();
 	}
 }
@@ -206,6 +204,8 @@ void UVremInventoryComponent::RemoveItemFromInventory(const UVremItemDefinition*
 
 void UVremInventoryComponent::InitializeDefaultItems()
 {
+	UE_LOG(LogVremInventory, Warning, TEXT("UVremInventoryComponent::InitializeDefaultItems"));
+
 	check(IsValid(GetOwner()));
 	check(GetOwner()->HasAuthority());
 

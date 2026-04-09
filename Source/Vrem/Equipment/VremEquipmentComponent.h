@@ -93,14 +93,18 @@ class VREM_API UVremEquipmentComponent : public UActorComponent
 public:	
 	// Sets default values for this component's properties
 	UVremEquipmentComponent();
-	
-	void BeginPlay() override;
 
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 
+	void InitializeFromOwner();
 public:
 	void TryEquipItem(const UVremEquipmentDefinition* ItemToEquip);
 	void TryUnequipItem(const UVremEquipmentDefinition* ItemToUnequip);
+
+public:
+	DECLARE_MULTICAST_DELEGATE_OneParam(FOnEquipmentChanged, const UVremEquipmentDefinition*)
+	FOnEquipmentChanged OnEquipmenntAttached;
+	FOnEquipmentChanged OnEquipmenntDetached;
 
 protected:
 	UFUNCTION()

@@ -40,7 +40,7 @@ public:
 	FTransform AttachOffset;
 
 	UPROPERTY(EditDefaultsOnly)
-    TSoftClassPtr<UAnimInstance> AnimLayerClass;
+    TSubclassOf<UAnimInstance> AnimLayerClass;
 };
 
 UCLASS()

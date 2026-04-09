@@ -15,6 +15,7 @@ class UVremCameraMode;
 class UVremInventoryComponent;
 class UVremEquipmentComponent;
 struct FInputActionValue;
+class UVremEquipmentDefinition;
 
 UCLASS()
 class VREM_API AVremCharacter : public ACharacter
@@ -27,7 +28,8 @@ public:
 
 	virtual void BeginPlay() override;
 	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
-	
+	virtual void PostInitializeComponents() override;
+
 	virtual void Tick(float DeltaTime) override;
 
 #pragma region input
@@ -69,6 +71,10 @@ protected:
 #pragma endregion
 
 #pragma region weaponsystem
+protected:
+	void OnEquipmentActorAttached(const UVremEquipmentDefinition* EquipmentDefinition);
+	void OnEquipmentActorDetached(const UVremEquipmentDefinition* EquipmentDefinition);
+
 protected:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly)
 	TObjectPtr<UVremInventoryComponent> InventoryComponent;
