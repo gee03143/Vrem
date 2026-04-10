@@ -72,8 +72,8 @@ protected:
 
 #pragma region weaponsystem
 protected:
-	void OnEquipmentActorAttached(const UVremEquipmentDefinition* EquipmentDefinition);
-	void OnEquipmentActorDetached(const UVremEquipmentDefinition* EquipmentDefinition);
+	void OnEquipmentActorAttached(const TSubclassOf<UAnimInstance> InAnimLayerClass);
+	void OnEquipmentActorDetached(const TSubclassOf<UAnimInstance> InAnimLayerClass);
 
 protected:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly)

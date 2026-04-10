@@ -10,9 +10,10 @@
 // UVremEquipmentInstance
 // =======================================
 
-void UVremEquipmentInstance::OnItemCreated(UVremEquipmentDefinition* InEquipmentDefinition)
+void UVremEquipmentInstance::Initialize(const UVremEquipmentDefinition* InEquipmentDefinition, AActor* InParentActor)
 {
 	EquipmentDefinition = InEquipmentDefinition;
+	ParentActor = InParentActor;
 
 	if (InEquipmentDefinition == nullptr)
 	{
@@ -21,72 +22,135 @@ void UVremEquipmentInstance::OnItemCreated(UVremEquipmentDefinition* InEquipment
 	}
 }
 
-void UVremEquipmentInstance::OnItemRemoved()
+void UVremEquipmentInstance::Cleanup()
 {
-	RequestRemoveActor();
+	EquipmentDefinition = nullptr;
+	ParentActor = nullptr;
+	RemoveEquipmentActor();
 }
 
-void UVremEquipmentInstance::RequestAttach(AActor* ParentActor)
+void UVremEquipmentInstance::BeginDestroy()
 {
-	UE_LOG(LogVremEquipment, Warning, TEXT("UVremEquipmentInstance::RequestAttach"));
+	Super::BeginDestroy();
 
-	if (IsValid(ParentActor) == false)
+	Cleanup();
+}
+
+void UVremEquipmentInstance::SetEquipmentState(EEquipmentState InEquipmentState)
+{
+	if (ParentActor.IsValid() == false)
 	{
-		UE_LOG(LogVremEquipment, Warning, TEXT("UItemFragment_Equipment::RequestAttach: ParentActor is invalid"));
+		UE_LOG(LogVremEquipment, Warning, TEXT("UVremEquipmentInstance::SetEquipmentState: ParentActor is invalid"));
 		return;
 	}
 
-	if (IsValid(EquipmentDefinition) == false)
+	if (ParentActor->HasAuthority() == false)
 	{
-		UE_LOG(LogVremEquipment, Warning, TEXT("UItemFragment_Equipment::RequestAttach: EquipmentDefinition is invalid"));
+		UE_LOG(LogVremEquipment, Warning, TEXT("UVremEquipmentInstance::SetEquipmentState: Trying to change EquipmentState but ParentActor not have authority"));
+		return;
+	}
+
+	if (EquipmentState == InEquipmentState)
+	{
+		return;
+	}
+
+	EquipmentState = InEquipmentState;
+
+	ApplyEquipmentState();
+
+}
+
+void UVremEquipmentInstance::ApplyEquipmentState()
+{
+	const UVremEquipmentDefinition* EquipmentDefinitionCDO = EquipmentDefinition->GetDefaultObject<UVremEquipmentDefinition>();
+	if (IsValid(EquipmentDefinitionCDO) == false)
+	{
+		return;
+	}
+
+	switch (EquipmentState)
+	{
+	case EEquipmentState::Equipped:
+		AttachToSocket(EquipmentDefinitionCDO->AttachSocketName, EquipmentDefinitionCDO->AttachOffset);
+		break;
+
+	case EEquipmentState::Holstered:
+		AttachToSocket(EquipmentDefinitionCDO->HolsterSocketName, EquipmentDefinitionCDO->HolsterOffset);
+		break;
+
+	case EEquipmentState::Unequipped:
+		RemoveEquipmentActor();
+		break;
+	}
+}
+
+void UVremEquipmentInstance::RemoveEquipmentActor()
+{
+	if (IsValid(EquipmentActor))
+	{
+		EquipmentActor->Destroy();
+		EquipmentActor = nullptr;
+	}
+}
+
+void UVremEquipmentInstance::AttachToSocket(const FName& SocketName, const FTransform& Offset)
+{
+	if (ParentActor.IsValid() == false)
+	{
+		UE_LOG(LogVremEquipment, Warning, TEXT("UVremEquipmentInstance::AttachToSocket: ParentActor is invalid"));
+		return;
+	}
+
+	if (ParentActor->HasAuthority() == false)
+	{
+		UE_LOG(LogVremEquipment, Warning, TEXT("UVremEquipmentInstance::AttachToSocket: Trying to Spawn EquipmentActor but ParentActor not have authority"));
+		return;
+	}
+
+	const UVremEquipmentDefinition* EquipmentDefinitionCDO = EquipmentDefinition->GetDefaultObject<UVremEquipmentDefinition>();
+	if (IsValid(EquipmentDefinitionCDO) == false)
+	{
+		UE_LOG(LogVremEquipment, Warning, TEXT("UVremEquipmentInstance::AttachToSocket: EquipmentDefinition is invalid"));
 		return;
 	}
 
 	// 이미 생성된 경우 → 재사용
-	if (EquipmentActor)
+	if (IsValid(EquipmentActor))
 	{
-		EquipmentActor->AttachToActor(ParentActor, FAttachmentTransformRules::SnapToTargetNotIncludingScale, EquipmentDefinition->AttachSocketName);
+		EquipmentActor->AttachToActor(ParentActor.Get(), FAttachmentTransformRules::SnapToTargetNotIncludingScale, SocketName);
 		return;
 	}
 
-	if (EquipmentDefinition->EquipmentActorClass.IsNull())
+	if (EquipmentDefinitionCDO->EquipmentActorClass.IsNull())
 	{
 		// 액터 클래스가 세팅되지 않은 경우 스킵
+		UE_LOG(LogVremEquipment, Warning, TEXT("UVremEquipmentInstance::AttachToSocket: EquipmentDefinition EquipmentActorClass is not set"));
 		return;
 	}
 
 	UWorld* World = ParentActor->GetWorld();
 	if (IsValid(World) == false)
 	{
-		UE_LOG(LogVremEquipment, Warning, TEXT("UItemFragment_Equipment::RequestAttach: World is invalid"));
-		return;
-	}
-
-	if (ParentActor->HasAuthority() == false)
-	{
-		UE_LOG(LogVremEquipment, Warning, TEXT("UItemFragment_Equipment::RequestAttach: Trying to Spawn EquipmentActor but ParentActor not have authority"));
+		UE_LOG(LogVremEquipment, Warning, TEXT("UVremEquipmentInstance::AttachToSocket: World is invalid"));
 		return;
 	}
 
 	// SoftClass → Load
-	UClass* ActorClass = EquipmentDefinition->EquipmentActorClass.LoadSynchronous();
+	UClass* ActorClass = EquipmentDefinitionCDO->EquipmentActorClass.LoadSynchronous();
 	if (IsValid(ActorClass) == false)
 	{
-		UE_LOG(LogVremEquipment, Warning, TEXT("Failed to load EquipmentActorClass"));
+		UE_LOG(LogVremEquipment, Warning, TEXT("UVremEquipmentInstance::AttachToSocket: Failed to load EquipmentActorClass"));
 		return;
 	}
-
 
 	// spawn
-	AVremEquipmentActor* SpawnedActor = World->SpawnActorDeferred<AVremEquipmentActor>(ActorClass, FTransform::Identity, ParentActor, nullptr, ESpawnActorCollisionHandlingMethod::AlwaysSpawn);
+	AVremEquipmentActor* SpawnedActor = World->SpawnActorDeferred<AVremEquipmentActor>(ActorClass, FTransform::Identity, ParentActor.Get(), nullptr, ESpawnActorCollisionHandlingMethod::AlwaysSpawn);
 	if (IsValid(SpawnedActor) == false)
 	{
-		UE_LOG(LogVremEquipment, Warning, TEXT("UItemFragment_Equipment::RequestAttach: SpawnedActor is invalid"));
+		UE_LOG(LogVremEquipment, Warning, TEXT("UVremEquipmentInstance::AttachToSocket: SpawnedActor is invalid"));
 		return;
 	}
-
-	SpawnedActor->AttachSocketName = EquipmentDefinition->AttachSocketName;
-	SpawnedActor->AttachOffset = EquipmentDefinition->AttachOffset;
 
 	// Attach
 	USkeletalMeshComponent* Mesh = ParentActor->FindComponentByClass<USkeletalMeshComponent>();
@@ -95,22 +159,13 @@ void UVremEquipmentInstance::RequestAttach(AActor* ParentActor)
 		SpawnedActor->AttachToComponent(
 			Mesh,
 			FAttachmentTransformRules::SnapToTargetNotIncludingScale,
-			EquipmentDefinition->AttachSocketName
+			SocketName
 		);
 	}
 
 	// Offset 적용
-	SpawnedActor->SetActorRelativeTransform(EquipmentDefinition->AttachOffset);
+	SpawnedActor->SetActorRelativeTransform(Offset);
 
 	UGameplayStatics::FinishSpawningActor(SpawnedActor, FTransform::Identity);
 	EquipmentActor = SpawnedActor;
-}
-
-void UVremEquipmentInstance::RequestRemoveActor()
-{
-	if (IsValid(EquipmentActor))
-	{
-		EquipmentActor->Destroy();
-		EquipmentActor = nullptr;
-	}
 }

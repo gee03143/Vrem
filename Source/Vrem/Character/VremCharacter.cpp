@@ -410,15 +410,9 @@ void AVremCharacter::TryBindInputByInputConfig()
 	}
 }
 
-void AVremCharacter::OnEquipmentActorAttached(const UVremEquipmentDefinition* EquipmentDefinition)
+void AVremCharacter::OnEquipmentActorAttached(const TSubclassOf<UAnimInstance> InAnimLayerClass)
 {
-	if (IsValid(EquipmentDefinition) == false)
-	{
-		UE_LOG(LogVremEquipment, Warning, TEXT("AVremCharacter::OnEquipmentActorAttached EquipmentDefinition is nullptr"));
-		return;
-	}
-
-	if (EquipmentDefinition->AnimLayerClass == nullptr)
+	if (InAnimLayerClass == nullptr)
 	{
 		UE_LOG(LogVremEquipment, Warning, TEXT("AVremCharacter::OnEquipmentActorAttached AnimLayerClass is nullptr"));
 		return;
@@ -431,19 +425,12 @@ void AVremCharacter::OnEquipmentActorAttached(const UVremEquipmentDefinition* Eq
 		return;
 	}
 
-	UE_LOG(LogVremEquipment, Warning, TEXT("AVremCharacter::OnEquipmentActorAttached LinkAnimLayer : [%s]"), *EquipmentDefinition->AnimLayerClass->GetName());
-	AnimInstance->SetWeaponAnimLayer(EquipmentDefinition->AnimLayerClass);
+	AnimInstance->SetWeaponAnimLayer(InAnimLayerClass);
 }
 
-void AVremCharacter::OnEquipmentActorDetached(const UVremEquipmentDefinition* EquipmentDefinition)
+void AVremCharacter::OnEquipmentActorDetached(const TSubclassOf<UAnimInstance> InAnimLayerClass)
 {
-	if (IsValid(EquipmentDefinition) == false)
-	{
-		UE_LOG(LogVremEquipment, Warning, TEXT("AVremCharacter::OnEquipmentActorDetached EquipmentDefinition is nullptr"));
-		return;
-	}
-
-	if (EquipmentDefinition->AnimLayerClass == nullptr)
+	if (InAnimLayerClass == nullptr)
 	{
 		UE_LOG(LogVremEquipment, Warning, TEXT("AVremCharacter::OnEquipmentActorDetached AnimLayerClass is nullptr"));
 		return;
@@ -456,7 +443,7 @@ void AVremCharacter::OnEquipmentActorDetached(const UVremEquipmentDefinition* Eq
 		return;
 	}
 
-	if (AnimInstance->GetCurrentLayer() != EquipmentDefinition->AnimLayerClass)
+	if (AnimInstance->GetCurrentLayer() == InAnimLayerClass)
 	{
 		AnimInstance->SetWeaponAnimLayer(nullptr);
 	}

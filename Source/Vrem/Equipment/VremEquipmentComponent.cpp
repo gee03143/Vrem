@@ -4,9 +4,26 @@
 #include "VremEquipmentComponent.h"
 #include "Net/UnrealNetwork.h"
 #include "Vrem/VremLogChannels.h"
-#include "VremEquipmentDefinition.h"
 #include "UObject/TopLevelAssetPath.h"
 
+void FEquipmentEntry::SetAndApplyEquipmentState(EEquipmentState InEquipmentState)
+{
+	if (EquipmentState == InEquipmentState)
+	{
+		return;
+	}
+
+	EquipmentState = InEquipmentState;
+	ApplyEquipmentStateToInstance();
+}
+
+void FEquipmentEntry::ApplyEquipmentStateToInstance()
+{
+	if (IsValid(EquipmentInstance))
+	{
+		EquipmentInstance->SetEquipmentState(EquipmentState);
+	}
+}
 
 void FEquipmentList::SetOwner(UVremEquipmentComponent* InOwner)
 {
@@ -25,48 +42,42 @@ void FEquipmentList::SetOwner(UVremEquipmentComponent* InOwner)
 	}
 }
 
-void FEquipmentList::AddEntry(const FTopLevelAssetPath& ItemToEquip)
+void FEquipmentList::AddEntry(UVremEquipmentDefinition* InEquipmentDefinition, int32 InIndex)
 {
-	FEquipmentEntry* FoundEntry = GetEntryFromId(ItemToEquip);
+	FEquipmentEntry* FoundEntry = GetEntryFromIndex(InIndex);
 	if (FoundEntry)
 	{
-		UE_LOG(LogVremEquipment, Warning, TEXT("FEquipmentList::AddEntry: Same Equipment Entry Trying to Add Twice"));
-		return;
+		RemoveEntry(InIndex);
 	}
-	else
+
+	if (IsValid(InEquipmentDefinition))
 	{
-		FSoftObjectPath SoftPath(ItemToEquip);
-		TSoftObjectPtr<UVremEquipmentDefinition> DefPtr(SoftPath);
-		UVremEquipmentDefinition* EquipmentDefinition = DefPtr.LoadSynchronous();
+		FEquipmentEntry& NewEntry = Entries.Emplace_GetRef();
+		NewEntry.EquipmentDefiniton = InEquipmentDefinition;
+		NewEntry.EquipmentIndex = InIndex;
 
-		if (IsValid(EquipmentDefinition))
+		if (IsValid(OwnerComponent))
 		{
-			FEquipmentEntry& NewEntry = Entries.Emplace_GetRef();
-			NewEntry.EquipmentDefPath = ItemToEquip;
-
-			if (IsValid(OwnerComponent))
-			{
-				CreateInstanceForEntry(NewEntry);
-			}
-			else
-			{
-				PendingEntriesForCreateInstance.AddUnique(NewEntry);
-			}
+			CreateInstanceForEntry(NewEntry);
 		}
 		else
 		{
-			UE_LOG(LogVremEquipment, Warning, TEXT("FEquipmentList::AddEntry: Failed To Load EquipmentDefinition, LoadedPath : %s"), *SoftPath.ToString());
+			PendingEntriesForCreateInstance.AddUnique(NewEntry);
 		}
+	}
+	else
+	{
+		UE_LOG(LogVremEquipment, Warning, TEXT("FEquipmentList::AddEntry: Failed To Load EquipmentDefinition, LoadedPath : %s"), *InEquipmentDefinition->GetName());
 	}
 }
 
-void FEquipmentList::RemoveEntry(const FTopLevelAssetPath& ItemToUnequip)
+void FEquipmentList::RemoveEntry(int32 InIndex)
 {
 	for (int32 i = 0; i < Entries.Num(); ++i)
 	{
-		if (Entries[i].EquipmentDefPath == ItemToUnequip)
+		if (Entries[i].EquipmentIndex == InIndex)
 		{
-			Entries[i].EquipmentInstance->OnItemRemoved();
+			Entries[i].EquipmentInstance->Cleanup();
 			Entries.RemoveAt(i);
 
 			MarkArrayDirty();
@@ -100,7 +111,14 @@ void FEquipmentList::PostReplicatedChange(const TArrayView<int32> ChangedIndices
 
 		if (OwnerComponent)
 		{
-			CreateInstanceForEntry(Entry);
+			if (Entry.EquipmentInstance)
+			{
+				Entry.ApplyEquipmentStateToInstance();
+			}
+			else
+			{
+				CreateInstanceForEntry(Entry);
+			}
 		}
 		else
 		{
@@ -123,21 +141,17 @@ void FEquipmentList::CreateInstanceForEntry(FEquipmentEntry& Entry)
 		return;
 	}
 
-	FSoftObjectPath SoftPath(Entry.EquipmentDefPath);
-	TSoftObjectPtr<UVremEquipmentDefinition> DefPtr(SoftPath);
-	UVremEquipmentDefinition* EquipmentDefinition = DefPtr.LoadSynchronous();
-	if (IsValid(EquipmentDefinition))
+	if (IsValid(Entry.EquipmentDefiniton))
 	{
 		Entry.EquipmentInstance = NewObject<UVremEquipmentInstance>(OwnerComponent);
-		Entry.EquipmentInstance->OnItemCreated(EquipmentDefinition);
-
-		Entry.EquipmentInstance->RequestAttach(OwnerComponent->GetOwner());
+		Entry.EquipmentInstance->Initialize(Entry.EquipmentDefiniton, OwnerComponent->GetOwner());
+		Entry.SetAndApplyEquipmentState(EEquipmentState::Unequipped);
 
 		MarkItemDirty(Entry);
 	}
 	else
 	{
-		UE_LOG(LogVremEquipment, Warning, TEXT("CreateInstanceForEntry Failed To Load EquipmentDefinition, LoadedPath : %s"), *SoftPath.ToString());
+		UE_LOG(LogVremEquipment, Warning, TEXT("CreateInstanceForEntry Failed To Load EquipmentDefinition LoadedPath : %s"), *Entry.EquipmentDefiniton->GetName());
 	}
 }
 
@@ -161,32 +175,55 @@ void UVremEquipmentComponent::InitializeFromOwner()
 	EquipmentList.SetOwner(this);
 }
 
-void UVremEquipmentComponent::TryEquipItem(const UVremEquipmentDefinition* ItemToEquip)
+void UVremEquipmentComponent::SetCurrentWeapon(int32 InWeaponSlotIndex)
 {
-	check(IsValid(GetOwner()));
-	check(GetOwner()->HasAuthority());
+	FEquipmentEntry* EquipmentEntry = EquipmentList.GetEntryFromIndex(CurrentWeaponSlotIndex);
+	if (EquipmentEntry != nullptr)
+	{
+		EquipmentEntry->SetAndApplyEquipmentState(EEquipmentState::Holstered);
+		EquipmentList.MarkItemDirty(*EquipmentEntry);
+	}
 
-	const FSoftObjectPath SoftPath(ItemToEquip);
-	EquipmentList.AddEntry(SoftPath.GetAssetPath());
+	CurrentWeaponSlotIndex = InWeaponSlotIndex;
 
-	if (ItemToEquip->AnimLayerClass)
-	{ 
-		UE_LOG(LogVremEquipment, Warning, TEXT("UVremEquipmentComponent::TryEquipItem"));
-		OnEquipmenntAttached.Broadcast(ItemToEquip);
+	EquipmentEntry = EquipmentList.GetEntryFromIndex(CurrentWeaponSlotIndex);
+	if (EquipmentEntry != nullptr)
+	{
+		EquipmentEntry->SetAndApplyEquipmentState(EEquipmentState::Equipped);
+		EquipmentList.MarkItemDirty(*EquipmentEntry);
 	}
 }
 
-void UVremEquipmentComponent::TryUnequipItem(const UVremEquipmentDefinition* ItemToUnequip)
+void UVremEquipmentComponent::TryEquipItem(UVremEquipmentDefinition* ItemToEquip, int32 InSlotIndex)
 {
 	check(IsValid(GetOwner()));
 	check(GetOwner()->HasAuthority());
 
-	const FSoftObjectPath SoftPath(ItemToUnequip);
-	EquipmentList.RemoveEntry(SoftPath.GetAssetPath());
+	if (IsValid(ItemToEquip))
+	{ 
+		EquipmentList.AddEntry(ItemToEquip, InSlotIndex);
+		if (ItemToEquip->AnimLayerClass)
+		{
+			OnEquipmenntAttached.Broadcast(ItemToEquip->AnimLayerClass);
+		}
+	}
+}
 
-	if (ItemToUnequip->AnimLayerClass)
+void UVremEquipmentComponent::TryUnequipItem(int32 InSlotIndex)
+{
+	check(IsValid(GetOwner()));
+	check(GetOwner()->HasAuthority());
+
+	FEquipmentEntry* EquipmentEntry = EquipmentList.GetEntryFromIndex(InSlotIndex);
+
+	EquipmentList.RemoveEntry(InSlotIndex);
+
+	if (EquipmentEntry != nullptr)
 	{
-		OnEquipmenntDetached.Broadcast(ItemToUnequip);
+		if (IsValid(EquipmentEntry->EquipmentDefiniton) && EquipmentEntry->EquipmentDefiniton->AnimLayerClass)
+		{
+			OnEquipmenntDetached.Broadcast(EquipmentEntry->EquipmentDefiniton->AnimLayerClass);
+		}
 	}
 }
 

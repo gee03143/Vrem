@@ -143,7 +143,7 @@ void FInventoryList::CreateInstanceForEntry(FInventoryEntry& Entry)
 				if (IsValid(EquipmentFragment))
 				{
 					UVremEquipmentComponent* EquipmentComponent = OwnerComponent->GetOwner()->GetComponentByClass<UVremEquipmentComponent>();
-					EquipmentComponent->TryEquipItem(EquipmentFragment->GetEquipmentDefinition());
+					EquipmentComponent->TryEquipItem(EquipmentFragment->GetEquipmentDefinition(), EquipmentComponent->GetEquipmentItemNum() + 1);
 				}
 				else
 				{
@@ -212,6 +212,12 @@ void UVremInventoryComponent::InitializeDefaultItems()
 	for (const UVremItemDefinition* Def : DefaultItemDefinitions)
 	{
 		AddItemToInventory(Def);
+	}
+
+	// temp code...
+	{
+		UVremEquipmentComponent* EquipmentComponent = GetOwner()->GetComponentByClass<UVremEquipmentComponent>();
+		EquipmentComponent->SetCurrentWeapon(1);
 	}
 }
 

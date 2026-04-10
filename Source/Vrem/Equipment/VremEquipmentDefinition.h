@@ -11,13 +11,24 @@
 class UVremEquipmentDefinition;
 class AVremEquipmentActor;
 
+UENUM()
+enum class EEquipmentState : uint8
+{
+	Equipped,
+	Holstered,
+	Unequipped
+};
+
 UCLASS()
 class UItemFragment_Equipment : public UItemFragment
 {
     GENERATED_BODY()
 
 public:
-	const UVremEquipmentDefinition* GetEquipmentDefinition() const { return EquipmentDefinition; }
+	UVremEquipmentDefinition* GetEquipmentDefinition() const 
+	{ 
+		return EquipmentDefinition;
+	}
 
 protected:
 	UPROPERTY(EditDefaultsOnly)
@@ -40,6 +51,12 @@ public:
 	FTransform AttachOffset;
 
 	UPROPERTY(EditDefaultsOnly)
+	FName HolsterSocketName;
+
+	UPROPERTY(EditDefaultsOnly)
+	FTransform HolsterOffset;
+
+	UPROPERTY(EditDefaultsOnly)
     TSubclassOf<UAnimInstance> AnimLayerClass;
 };
 
@@ -49,15 +66,28 @@ class VREM_API UVremEquipmentInstance : public UObject
 	GENERATED_BODY()
 
 public:
-	void OnItemCreated(UVremEquipmentDefinition* InEquipmentDefinition);
-	void OnItemRemoved();
+	void Initialize(const UVremEquipmentDefinition* InEquipmentDefinition, AActor* InParentActor);
+	void Cleanup();
 
-	void RequestAttach(AActor* ParentActor);
-	void RequestRemoveActor();
+	virtual void BeginDestroy() override;
+
+	void SetEquipmentState(EEquipmentState InEquipmentState);
+	EEquipmentState GetEquipmentState() const { return EquipmentState; }
 
 protected:
-	TObjectPtr<UVremEquipmentDefinition> EquipmentDefinition;
+	void ApplyEquipmentState();
+	void AttachToSocket(const FName& SocketName, const FTransform& Offset);
+	void RemoveEquipmentActor();
 
+protected:
+	TSoftClassPtr<UVremEquipmentDefinition> EquipmentDefinition;
+
+	// 클라에서는 항상 nullptr
 	UPROPERTY(Transient)
 	TObjectPtr<AVremEquipmentActor> EquipmentActor;
+
+	UPROPERTY(Transient)
+	TWeakObjectPtr<AActor> ParentActor;
+
+	EEquipmentState EquipmentState;
 };

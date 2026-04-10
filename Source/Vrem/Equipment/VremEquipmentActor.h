@@ -10,14 +10,7 @@ UCLASS()
 class VREM_API AVremEquipmentActor : public AActor
 {
 	GENERATED_BODY()
-	
-public:	
-	AVremEquipmentActor();
-
-protected:
-	virtual void BeginPlay() override;
 
 public:
-	FName AttachSocketName;
-	FTransform AttachOffset;
+	AVremEquipmentActor();
 };

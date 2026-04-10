@@ -6,30 +6,38 @@
 #include "Components/ActorComponent.h"
 #include "Net/Serialization/FastArraySerializer.h"
 #include "GameplayTagContainer.h"
+#include "VremEquipmentDefinition.h"
 #include "VremEquipmentComponent.generated.h"
-
-class UVremEquipmentInstance;
-class UVremEquipmentDefinition;
 
 USTRUCT()
 struct FEquipmentEntry : public FFastArraySerializerItem
 {
     GENERATED_BODY()
 
-    UPROPERTY()
-    FTopLevelAssetPath EquipmentDefPath;
+	UPROPERTY()
+	UVremEquipmentDefinition* EquipmentDefiniton;
 
 	UVremEquipmentInstance* EquipmentInstance;
 
+	UPROPERTY()
+	EEquipmentState EquipmentState = EEquipmentState::Unequipped;
+
+	UPROPERTY()
+	int32 EquipmentIndex = INDEX_NONE;
+
 	FString ToString() const
 	{
-		return FString::Printf(TEXT("ItemId: %s"), *EquipmentDefPath.ToString());
+		return FString::Printf(TEXT("EquipmentIndex: %d ItemId: %s"), EquipmentIndex, *EquipmentDefiniton->GetName());
 	}
+
+	void SetAndApplyEquipmentState(EEquipmentState InEquipmentState);
+	void ApplyEquipmentStateToInstance();
 
 	bool operator==(const FEquipmentEntry& Other) const
 	{
-		return EquipmentDefPath == Other.EquipmentDefPath;
+		return EquipmentIndex == Other.EquipmentIndex;
 	}
+
 };
 
 USTRUCT()
@@ -39,19 +47,20 @@ struct FEquipmentList : public FFastArraySerializer
 
 	void SetOwner(UVremEquipmentComponent* InOwner);
 
-	FEquipmentEntry* GetEntryFromId(const FTopLevelAssetPath& InEquipmentDefPath)
+	FEquipmentEntry* GetEntryFromIndex(const int32 InIndex)
 	{
 		FEquipmentEntry* FoundEntry = Entries.FindByPredicate(
-			[InEquipmentDefPath](const FEquipmentEntry& Other)
+			[InIndex](const FEquipmentEntry& Other)
 			{
-				return InEquipmentDefPath == Other.EquipmentDefPath;
+				return InIndex == Other.EquipmentIndex;
 			});
 
 		return FoundEntry;
 	}
 
-	void AddEntry(const FTopLevelAssetPath& ItemToEquip);
-	void RemoveEntry(const FTopLevelAssetPath& ItemToUnequip);
+	void AddEntry(UVremEquipmentDefinition* InEquipmentDefinition, int32 InIndex);
+	void RemoveEntry(int32 InIndex);
+	int32 GetNumEntries() const { return Entries.Num(); }
 
 	FString ToString() const
 	{
@@ -98,17 +107,24 @@ public:
 
 	void InitializeFromOwner();
 public:
-	void TryEquipItem(const UVremEquipmentDefinition* ItemToEquip);
-	void TryUnequipItem(const UVremEquipmentDefinition* ItemToUnequip);
+	void SetCurrentWeapon(int32 InWeaponSlotIndex);
+	int32 GetEquipmentItemNum() const { return EquipmentList.GetNumEntries(); }
+
+	void TryEquipItem(UVremEquipmentDefinition* ItemToEquip, int32 InSlotIndex);
+	void TryUnequipItem(int32 InSlotIndex);
 
 public:
-	DECLARE_MULTICAST_DELEGATE_OneParam(FOnEquipmentChanged, const UVremEquipmentDefinition*)
+	DECLARE_MULTICAST_DELEGATE_OneParam(FOnEquipmentChanged, const TSubclassOf<UAnimInstance>)
 	FOnEquipmentChanged OnEquipmenntAttached;
 	FOnEquipmentChanged OnEquipmenntDetached;
 
 protected:
 	UFUNCTION()
 	void OnRep_EquipmentList();
+
+protected:
+	UPROPERTY(EditDefaultsOnly)
+	int32 CurrentWeaponSlotIndex = INDEX_NONE;
 
 private:
 	UPROPERTY(ReplicatedUsing = OnRep_EquipmentList)
