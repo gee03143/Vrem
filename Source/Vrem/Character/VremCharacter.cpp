@@ -101,14 +101,16 @@ void AVremCharacter::BeginPlay()
 		CameraSystem->SetTargetCameraMode(DefaultCameraMode);
 	}
 
-	if (IsValid(InventoryComponent))
-	{
-		InventoryComponent->InitializeFromOwner();
-	}
-
 	if (IsValid(EquipmentComponent))
 	{
+		EquipmentComponent->RegisterComponentWithWorld(GetWorld());
 		EquipmentComponent->InitializeFromOwner();
+	}
+
+	if (IsValid(InventoryComponent))
+	{
+		EquipmentComponent->RegisterComponentWithWorld(GetWorld());
+		InventoryComponent->InitializeFromOwner();
 	}
 }
 
@@ -128,7 +130,6 @@ void AVremCharacter::PostInitializeComponents()
 	
 	if (IsValid(EquipmentComponent) && GetNetMode() != NM_DedicatedServer)
 	{
-		UE_LOG(LogVremEquipment, Warning, TEXT("AVremCharacter::BeginPlay Event Binded"));
 		EquipmentComponent->OnEquipmenntAttached.AddUObject(this, &ThisClass::OnEquipmentActorAttached);
 		EquipmentComponent->OnEquipmenntDetached.AddUObject(this, &ThisClass::OnEquipmentActorDetached);
 	}
@@ -425,6 +426,7 @@ void AVremCharacter::OnEquipmentActorAttached(const TSubclassOf<UAnimInstance> I
 		return;
 	}
 
+	UE_LOG(LogVremEquipment, Warning, TEXT("AVremCharacter::OnEquipmentActorAttached NetRole : [%s]"), *GetNetRoleString(this));
 	AnimInstance->SetWeaponAnimLayer(InAnimLayerClass);
 }
 

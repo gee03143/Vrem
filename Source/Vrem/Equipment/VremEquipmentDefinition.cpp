@@ -5,6 +5,7 @@
 #include "VremEquipmentActor.h"
 #include "Vrem/VremLogChannels.h"
 #include "Kismet/GameplayStatics.h"
+#include "VremEquipmentComponent.h"
 
 // =======================================
 // UVremEquipmentInstance
@@ -12,6 +13,7 @@
 
 void UVremEquipmentInstance::Initialize(const UVremEquipmentDefinition* InEquipmentDefinition, AActor* InParentActor)
 {
+	UE_LOG(LogVremEquipment, Warning, TEXT("UVremEquipmentInstance::Initialize  NetMode : %s"), *GetNetModeString(GetWorld()));
 	EquipmentDefinition = InEquipmentDefinition;
 	ParentActor = InParentActor;
 
@@ -20,6 +22,8 @@ void UVremEquipmentInstance::Initialize(const UVremEquipmentDefinition* InEquipm
 		UE_LOG(LogVremEquipment, Warning, TEXT("UVremEquipmentInstance::OnItemCreated InItemDefinition is nullptr\nNetMode : %s"), *GetNetModeString(GetWorld()));
 		return;
 	}
+
+	ApplyEquipmentState();
 }
 
 void UVremEquipmentInstance::Cleanup()
@@ -44,12 +48,6 @@ void UVremEquipmentInstance::SetEquipmentState(EEquipmentState InEquipmentState)
 		return;
 	}
 
-	if (ParentActor->HasAuthority() == false)
-	{
-		UE_LOG(LogVremEquipment, Warning, TEXT("UVremEquipmentInstance::SetEquipmentState: Trying to change EquipmentState but ParentActor not have authority"));
-		return;
-	}
-
 	if (EquipmentState == InEquipmentState)
 	{
 		return;
@@ -63,24 +61,40 @@ void UVremEquipmentInstance::SetEquipmentState(EEquipmentState InEquipmentState)
 
 void UVremEquipmentInstance::ApplyEquipmentState()
 {
-	const UVremEquipmentDefinition* EquipmentDefinitionCDO = EquipmentDefinition->GetDefaultObject<UVremEquipmentDefinition>();
-	if (IsValid(EquipmentDefinitionCDO) == false)
+	if (EquipmentDefinition.IsValid() == false)
 	{
+		UE_LOG(LogVremEquipment, Warning, TEXT("UVremEquipmentInstance::ApplyEquipmentState EquipmentDefinition not set NetMode : %s"), *GetNetModeString(GetWorld()));
 		return;
 	}
 
+	UVremEquipmentComponent* EquipmentComponent = ParentActor->GetComponentByClass<UVremEquipmentComponent>();
 	switch (EquipmentState)
 	{
 	case EEquipmentState::Equipped:
-		AttachToSocket(EquipmentDefinitionCDO->AttachSocketName, EquipmentDefinitionCDO->AttachOffset);
+		AttachToSocket(EquipmentDefinition->AttachSocketName, EquipmentDefinition->AttachOffset);
+		if (IsValid(EquipmentComponent))
+		{
+			EquipmentComponent->OnEquipmenntAttached.Broadcast(EquipmentDefinition->AnimLayerClass);
+		}
+		UE_LOG(LogVremEquipment, Warning, TEXT("UVremEquipmentInstance::ApplyEquipmentState EquipmentState : Equipped  NetMode : %s"), *GetNetModeString(GetWorld()));
 		break;
 
 	case EEquipmentState::Holstered:
-		AttachToSocket(EquipmentDefinitionCDO->HolsterSocketName, EquipmentDefinitionCDO->HolsterOffset);
+		AttachToSocket(EquipmentDefinition->HolsterSocketName, EquipmentDefinition->HolsterOffset);
+		if (IsValid(EquipmentComponent))
+		{
+			EquipmentComponent->OnEquipmenntDetached.Broadcast(EquipmentDefinition->AnimLayerClass);
+		}
+		UE_LOG(LogVremEquipment, Warning, TEXT("UVremEquipmentInstance::ApplyEquipmentState EquipmentState : Holstered  NetMode : %s"), *GetNetModeString(GetWorld()));
 		break;
 
 	case EEquipmentState::Unequipped:
 		RemoveEquipmentActor();
+		if (IsValid(EquipmentComponent))
+		{
+			EquipmentComponent->OnEquipmenntDetached.Broadcast(EquipmentDefinition->AnimLayerClass);
+		}
+		UE_LOG(LogVremEquipment, Warning, TEXT("UVremEquipmentInstance::ApplyEquipmentState EquipmentState : Unequipped  NetMode : %s"), *GetNetModeString(GetWorld()));
 		break;
 	}
 }
@@ -108,8 +122,7 @@ void UVremEquipmentInstance::AttachToSocket(const FName& SocketName, const FTran
 		return;
 	}
 
-	const UVremEquipmentDefinition* EquipmentDefinitionCDO = EquipmentDefinition->GetDefaultObject<UVremEquipmentDefinition>();
-	if (IsValid(EquipmentDefinitionCDO) == false)
+	if (EquipmentDefinition.IsValid() == false)
 	{
 		UE_LOG(LogVremEquipment, Warning, TEXT("UVremEquipmentInstance::AttachToSocket: EquipmentDefinition is invalid"));
 		return;
@@ -122,7 +135,7 @@ void UVremEquipmentInstance::AttachToSocket(const FName& SocketName, const FTran
 		return;
 	}
 
-	if (EquipmentDefinitionCDO->EquipmentActorClass.IsNull())
+	if (EquipmentDefinition->EquipmentActorClass.IsNull())
 	{
 		// 액터 클래스가 세팅되지 않은 경우 스킵
 		UE_LOG(LogVremEquipment, Warning, TEXT("UVremEquipmentInstance::AttachToSocket: EquipmentDefinition EquipmentActorClass is not set"));
@@ -137,7 +150,7 @@ void UVremEquipmentInstance::AttachToSocket(const FName& SocketName, const FTran
 	}
 
 	// SoftClass → Load
-	UClass* ActorClass = EquipmentDefinitionCDO->EquipmentActorClass.LoadSynchronous();
+	UClass* ActorClass = EquipmentDefinition->EquipmentActorClass.LoadSynchronous();
 	if (IsValid(ActorClass) == false)
 	{
 		UE_LOG(LogVremEquipment, Warning, TEXT("UVremEquipmentInstance::AttachToSocket: Failed to load EquipmentActorClass"));
@@ -145,7 +158,7 @@ void UVremEquipmentInstance::AttachToSocket(const FName& SocketName, const FTran
 	}
 
 	// spawn
-	AVremEquipmentActor* SpawnedActor = World->SpawnActorDeferred<AVremEquipmentActor>(ActorClass, FTransform::Identity, ParentActor.Get(), nullptr, ESpawnActorCollisionHandlingMethod::AlwaysSpawn);
+	AVremEquipmentActor* SpawnedActor = World->SpawnActor<AVremEquipmentActor>(ActorClass, FTransform::Identity);
 	if (IsValid(SpawnedActor) == false)
 	{
 		UE_LOG(LogVremEquipment, Warning, TEXT("UVremEquipmentInstance::AttachToSocket: SpawnedActor is invalid"));
@@ -166,6 +179,5 @@ void UVremEquipmentInstance::AttachToSocket(const FName& SocketName, const FTran
 	// Offset 적용
 	SpawnedActor->SetActorRelativeTransform(Offset);
 
-	UGameplayStatics::FinishSpawningActor(SpawnedActor, FTransform::Identity);
 	EquipmentActor = SpawnedActor;
 }

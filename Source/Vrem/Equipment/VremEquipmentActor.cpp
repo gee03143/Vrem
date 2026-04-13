@@ -10,4 +10,3 @@ AVremEquipmentActor::AVremEquipmentActor()
 {
 	bReplicates = true;
 }
-

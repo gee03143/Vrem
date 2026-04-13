@@ -9,14 +9,17 @@
 #include "VremEquipmentDefinition.h"
 #include "VremEquipmentComponent.generated.h"
 
+class UVremEquipmentComponent;
+
 USTRUCT()
 struct FEquipmentEntry : public FFastArraySerializerItem
 {
     GENERATED_BODY()
 
 	UPROPERTY()
-	UVremEquipmentDefinition* EquipmentDefiniton;
+	TWeakObjectPtr<const UVremEquipmentDefinition> EquipmentDefiniton;
 
+	UPROPERTY(Transient)
 	UVremEquipmentInstance* EquipmentInstance;
 
 	UPROPERTY()
@@ -31,7 +34,7 @@ struct FEquipmentEntry : public FFastArraySerializerItem
 	}
 
 	void SetAndApplyEquipmentState(EEquipmentState InEquipmentState);
-	void ApplyEquipmentStateToInstance();
+	void TryApplyEquipmentStateToInstance();
 
 	bool operator==(const FEquipmentEntry& Other) const
 	{
@@ -58,7 +61,7 @@ struct FEquipmentList : public FFastArraySerializer
 		return FoundEntry;
 	}
 
-	void AddEntry(UVremEquipmentDefinition* InEquipmentDefinition, int32 InIndex);
+	void AddEntry(const UVremEquipmentDefinition* InEquipmentDefinition, int32 InIndex);
 	void RemoveEntry(int32 InIndex);
 	int32 GetNumEntries() const { return Entries.Num(); }
 
@@ -90,8 +93,17 @@ private:
     UPROPERTY()
     TArray<FEquipmentEntry> Entries;
 
-	UVremEquipmentComponent* OwnerComponent = nullptr;
+	TWeakObjectPtr<UVremEquipmentComponent> OwnerComponent = nullptr;
 	TArray<FEquipmentEntry> PendingEntriesForCreateInstance;
+};
+
+template<>
+struct TStructOpsTypeTraits<FEquipmentList> : public TStructOpsTypeTraitsBase2<FEquipmentList>
+{
+	enum
+	{
+		WithNetDeltaSerializer = true,
+	};
 };
 
 UCLASS( ClassGroup=(Custom), meta=(BlueprintSpawnableComponent) )
@@ -110,7 +122,7 @@ public:
 	void SetCurrentWeapon(int32 InWeaponSlotIndex);
 	int32 GetEquipmentItemNum() const { return EquipmentList.GetNumEntries(); }
 
-	void TryEquipItem(UVremEquipmentDefinition* ItemToEquip, int32 InSlotIndex);
+	void TryEquipItem(const UVremEquipmentDefinition* ItemToEquip, int32 InSlotIndex);
 	void TryUnequipItem(int32 InSlotIndex);
 
 public:

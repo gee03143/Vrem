@@ -25,14 +25,14 @@ class UItemFragment_Equipment : public UItemFragment
     GENERATED_BODY()
 
 public:
-	UVremEquipmentDefinition* GetEquipmentDefinition() const 
+	const UVremEquipmentDefinition* GetEquipmentDefinition() const 
 	{ 
-		return EquipmentDefinition;
+		return EquipmentDefinition.Get();
 	}
 
 protected:
 	UPROPERTY(EditDefaultsOnly)
-	TObjectPtr<UVremEquipmentDefinition> EquipmentDefinition;
+	TObjectPtr<const UVremEquipmentDefinition> EquipmentDefinition;
 };
 
 UCLASS()
@@ -80,7 +80,8 @@ protected:
 	void RemoveEquipmentActor();
 
 protected:
-	TSoftClassPtr<UVremEquipmentDefinition> EquipmentDefinition;
+	UPROPERTY(Transient)
+	TWeakObjectPtr<const UVremEquipmentDefinition> EquipmentDefinition;
 
 	// 클라에서는 항상 nullptr
 	UPROPERTY(Transient)

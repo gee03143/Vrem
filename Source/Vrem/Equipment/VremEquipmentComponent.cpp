@@ -8,16 +8,11 @@
 
 void FEquipmentEntry::SetAndApplyEquipmentState(EEquipmentState InEquipmentState)
 {
-	if (EquipmentState == InEquipmentState)
-	{
-		return;
-	}
-
 	EquipmentState = InEquipmentState;
-	ApplyEquipmentStateToInstance();
+	TryApplyEquipmentStateToInstance();
 }
 
-void FEquipmentEntry::ApplyEquipmentStateToInstance()
+void FEquipmentEntry::TryApplyEquipmentStateToInstance()
 {
 	if (IsValid(EquipmentInstance))
 	{
@@ -42,7 +37,7 @@ void FEquipmentList::SetOwner(UVremEquipmentComponent* InOwner)
 	}
 }
 
-void FEquipmentList::AddEntry(UVremEquipmentDefinition* InEquipmentDefinition, int32 InIndex)
+void FEquipmentList::AddEntry(const UVremEquipmentDefinition* InEquipmentDefinition, int32 InIndex)
 {
 	FEquipmentEntry* FoundEntry = GetEntryFromIndex(InIndex);
 	if (FoundEntry)
@@ -56,7 +51,7 @@ void FEquipmentList::AddEntry(UVremEquipmentDefinition* InEquipmentDefinition, i
 		NewEntry.EquipmentDefiniton = InEquipmentDefinition;
 		NewEntry.EquipmentIndex = InIndex;
 
-		if (IsValid(OwnerComponent))
+		if (OwnerComponent.IsValid())
 		{
 			CreateInstanceForEntry(NewEntry);
 		}
@@ -92,7 +87,7 @@ void FEquipmentList::PostReplicatedAdd(const TArrayView<int32> AddedIndices, int
 	{
 		FEquipmentEntry& Entry = Entries[Index];
 
-		if (OwnerComponent)
+		if (OwnerComponent.IsValid())
 		{
 			CreateInstanceForEntry(Entry);
 		}
@@ -109,11 +104,12 @@ void FEquipmentList::PostReplicatedChange(const TArrayView<int32> ChangedIndices
 	{
 		FEquipmentEntry& Entry = Entries[Index];
 
-		if (OwnerComponent)
+		if (OwnerComponent.IsValid())
 		{
 			if (Entry.EquipmentInstance)
 			{
-				Entry.ApplyEquipmentStateToInstance();
+				UE_LOG(LogVremEquipment, Warning, TEXT("FEquipmentList::PostReplicatedChange TryApplyEquipmentStateToInstance"));
+				Entry.TryApplyEquipmentStateToInstance();
 			}
 			else
 			{
@@ -129,11 +125,13 @@ void FEquipmentList::PostReplicatedChange(const TArrayView<int32> ChangedIndices
 
 void FEquipmentList::CreateInstanceForEntry(FEquipmentEntry& Entry)
 {
-	if (!OwnerComponent)
+	if (OwnerComponent.IsValid() == false)
 	{
 		UE_LOG(LogVremEquipment, Warning, TEXT("CreateInstanceForEntry OwnerComponent is nullptr"));
 		return;
 	}
+
+	UE_LOG(LogVremEquipment, Warning, TEXT("UVremEquipmentInstance::CreateInstanceForEntry  NetMode : %s"), *GetNetModeString(OwnerComponent->GetWorld()));
 
 	if (Entry.EquipmentInstance)
 	{
@@ -141,11 +139,11 @@ void FEquipmentList::CreateInstanceForEntry(FEquipmentEntry& Entry)
 		return;
 	}
 
-	if (IsValid(Entry.EquipmentDefiniton))
+	if (Entry.EquipmentDefiniton.IsValid())
 	{
-		Entry.EquipmentInstance = NewObject<UVremEquipmentInstance>(OwnerComponent);
-		Entry.EquipmentInstance->Initialize(Entry.EquipmentDefiniton, OwnerComponent->GetOwner());
-		Entry.SetAndApplyEquipmentState(EEquipmentState::Unequipped);
+		Entry.EquipmentInstance = NewObject<UVremEquipmentInstance>(OwnerComponent.Get());
+		Entry.EquipmentInstance->Initialize(Entry.EquipmentDefiniton.Get(), OwnerComponent->GetOwner());
+		Entry.SetAndApplyEquipmentState(Entry.EquipmentState);
 
 		MarkItemDirty(Entry);
 	}
@@ -180,6 +178,7 @@ void UVremEquipmentComponent::SetCurrentWeapon(int32 InWeaponSlotIndex)
 	FEquipmentEntry* EquipmentEntry = EquipmentList.GetEntryFromIndex(CurrentWeaponSlotIndex);
 	if (EquipmentEntry != nullptr)
 	{
+		UE_LOG(LogVremEquipment, Warning, TEXT("UVremEquipmentComponent::SetCurrentWeapon"));
 		EquipmentEntry->SetAndApplyEquipmentState(EEquipmentState::Holstered);
 		EquipmentList.MarkItemDirty(*EquipmentEntry);
 	}
@@ -189,12 +188,13 @@ void UVremEquipmentComponent::SetCurrentWeapon(int32 InWeaponSlotIndex)
 	EquipmentEntry = EquipmentList.GetEntryFromIndex(CurrentWeaponSlotIndex);
 	if (EquipmentEntry != nullptr)
 	{
+		UE_LOG(LogVremEquipment, Warning, TEXT("UVremEquipmentComponent::SetCurrentWeapon"));
 		EquipmentEntry->SetAndApplyEquipmentState(EEquipmentState::Equipped);
 		EquipmentList.MarkItemDirty(*EquipmentEntry);
 	}
 }
 
-void UVremEquipmentComponent::TryEquipItem(UVremEquipmentDefinition* ItemToEquip, int32 InSlotIndex)
+void UVremEquipmentComponent::TryEquipItem(const UVremEquipmentDefinition* ItemToEquip, int32 InSlotIndex)
 {
 	check(IsValid(GetOwner()));
 	check(GetOwner()->HasAuthority());
@@ -202,10 +202,6 @@ void UVremEquipmentComponent::TryEquipItem(UVremEquipmentDefinition* ItemToEquip
 	if (IsValid(ItemToEquip))
 	{ 
 		EquipmentList.AddEntry(ItemToEquip, InSlotIndex);
-		if (ItemToEquip->AnimLayerClass)
-		{
-			OnEquipmenntAttached.Broadcast(ItemToEquip->AnimLayerClass);
-		}
 	}
 }
 
@@ -217,14 +213,6 @@ void UVremEquipmentComponent::TryUnequipItem(int32 InSlotIndex)
 	FEquipmentEntry* EquipmentEntry = EquipmentList.GetEntryFromIndex(InSlotIndex);
 
 	EquipmentList.RemoveEntry(InSlotIndex);
-
-	if (EquipmentEntry != nullptr)
-	{
-		if (IsValid(EquipmentEntry->EquipmentDefiniton) && EquipmentEntry->EquipmentDefiniton->AnimLayerClass)
-		{
-			OnEquipmenntDetached.Broadcast(EquipmentEntry->EquipmentDefiniton->AnimLayerClass);
-		}
-	}
 }
 
 void UVremEquipmentComponent::OnRep_EquipmentList()
