@@ -13,7 +13,6 @@
 
 void UVremEquipmentInstance::Initialize(const UVremEquipmentDefinition* InEquipmentDefinition, AActor* InParentActor)
 {
-	UE_LOG(LogVremEquipment, Warning, TEXT("UVremEquipmentInstance::Initialize  NetMode : %s"), *GetNetModeString(GetWorld()));
 	EquipmentDefinition = InEquipmentDefinition;
 	ParentActor = InParentActor;
 
@@ -22,21 +21,24 @@ void UVremEquipmentInstance::Initialize(const UVremEquipmentDefinition* InEquipm
 		UE_LOG(LogVremEquipment, Warning, TEXT("UVremEquipmentInstance::OnItemCreated InItemDefinition is nullptr\nNetMode : %s"), *GetNetModeString(GetWorld()));
 		return;
 	}
-
-	ApplyEquipmentState();
 }
 
 void UVremEquipmentInstance::Cleanup()
 {
+	// EquipmentActor는 서버 복제이므로, 서버에서만 제거
+	if (IsValid(EquipmentActor) && ParentActor.IsValid() && ParentActor->HasAuthority())
+	{
+		EquipmentActor->Destroy();
+	}
+
+	EquipmentActor = nullptr;
 	EquipmentDefinition = nullptr;
 	ParentActor = nullptr;
-	RemoveEquipmentActor();
 }
 
 void UVremEquipmentInstance::BeginDestroy()
 {
 	Super::BeginDestroy();
-
 	Cleanup();
 }
 
@@ -48,97 +50,52 @@ void UVremEquipmentInstance::SetEquipmentState(EEquipmentState InEquipmentState)
 		return;
 	}
 
-	if (EquipmentState == InEquipmentState)
-	{
-		return;
-	}
-
 	EquipmentState = InEquipmentState;
 
 	ApplyEquipmentState();
-
 }
 
-void UVremEquipmentInstance::ApplyEquipmentState()
+void UVremEquipmentInstance::BindEquipmentActor(AVremEquipmentActor* InActor)
 {
-	if (EquipmentDefinition.IsValid() == false)
+	// client only
+	check(ParentActor->HasAuthority() == false);
+
+	if (IsValid(InActor))
 	{
-		UE_LOG(LogVremEquipment, Warning, TEXT("UVremEquipmentInstance::ApplyEquipmentState EquipmentDefinition not set NetMode : %s"), *GetNetModeString(GetWorld()));
-		return;
+		EquipmentActor = InActor;
 	}
-
-	UVremEquipmentComponent* EquipmentComponent = ParentActor->GetComponentByClass<UVremEquipmentComponent>();
-	switch (EquipmentState)
+	else
 	{
-	case EEquipmentState::Equipped:
-		AttachToSocket(EquipmentDefinition->AttachSocketName, EquipmentDefinition->AttachOffset);
-		if (IsValid(EquipmentComponent))
-		{
-			EquipmentComponent->OnEquipmenntAttached.Broadcast(EquipmentDefinition->AnimLayerClass);
-		}
-		UE_LOG(LogVremEquipment, Warning, TEXT("UVremEquipmentInstance::ApplyEquipmentState EquipmentState : Equipped  NetMode : %s"), *GetNetModeString(GetWorld()));
-		break;
-
-	case EEquipmentState::Holstered:
-		AttachToSocket(EquipmentDefinition->HolsterSocketName, EquipmentDefinition->HolsterOffset);
-		if (IsValid(EquipmentComponent))
-		{
-			EquipmentComponent->OnEquipmenntDetached.Broadcast(EquipmentDefinition->AnimLayerClass);
-		}
-		UE_LOG(LogVremEquipment, Warning, TEXT("UVremEquipmentInstance::ApplyEquipmentState EquipmentState : Holstered  NetMode : %s"), *GetNetModeString(GetWorld()));
-		break;
-
-	case EEquipmentState::Unequipped:
-		RemoveEquipmentActor();
-		if (IsValid(EquipmentComponent))
-		{
-			EquipmentComponent->OnEquipmenntDetached.Broadcast(EquipmentDefinition->AnimLayerClass);
-		}
-		UE_LOG(LogVremEquipment, Warning, TEXT("UVremEquipmentInstance::ApplyEquipmentState EquipmentState : Unequipped  NetMode : %s"), *GetNetModeString(GetWorld()));
-		break;
+		UE_LOG(LogVremEquipment, Warning, TEXT("UVremEquipmentInstance::BindEquipmentActor: InActor is null  NetMode : %s"), *GetNetModeString(GetWorld()));
 	}
 }
 
-void UVremEquipmentInstance::RemoveEquipmentActor()
+void UVremEquipmentInstance::SpawnEquipmentActor()
 {
-	if (IsValid(EquipmentActor))
-	{
-		EquipmentActor->Destroy();
-		EquipmentActor = nullptr;
-	}
-}
+	// server only
+	check(ParentActor->HasAuthority());
 
-void UVremEquipmentInstance::AttachToSocket(const FName& SocketName, const FTransform& Offset)
-{
 	if (ParentActor.IsValid() == false)
 	{
-		UE_LOG(LogVremEquipment, Warning, TEXT("UVremEquipmentInstance::AttachToSocket: ParentActor is invalid"));
-		return;
-	}
-
-	if (ParentActor->HasAuthority() == false)
-	{
-		UE_LOG(LogVremEquipment, Warning, TEXT("UVremEquipmentInstance::AttachToSocket: Trying to Spawn EquipmentActor but ParentActor not have authority"));
-		return;
-	}
-
-	if (EquipmentDefinition.IsValid() == false)
-	{
-		UE_LOG(LogVremEquipment, Warning, TEXT("UVremEquipmentInstance::AttachToSocket: EquipmentDefinition is invalid"));
-		return;
-	}
-
-	// 이미 생성된 경우 → 재사용
-	if (IsValid(EquipmentActor))
-	{
-		EquipmentActor->AttachToActor(ParentActor.Get(), FAttachmentTransformRules::SnapToTargetNotIncludingScale, SocketName);
+		UE_LOG(LogVremEquipment, Warning, TEXT("UVremEquipmentInstance::SpawnEquipmentActor: ParentActor is invalid"));
 		return;
 	}
 
 	if (EquipmentDefinition->EquipmentActorClass.IsNull())
 	{
-		// 액터 클래스가 세팅되지 않은 경우 스킵
-		UE_LOG(LogVremEquipment, Warning, TEXT("UVremEquipmentInstance::AttachToSocket: EquipmentDefinition EquipmentActorClass is not set"));
+		UE_LOG(LogVremEquipment, Warning, TEXT("UVremEquipmentInstance::SpawnEquipmentActor: EquipmentDefinition EquipmentActorClass is not set"));
+		return;
+	}
+
+	if (EquipmentDefinition.IsValid() == false)
+	{
+		UE_LOG(LogVremEquipment, Warning, TEXT("UVremEquipmentInstance::SpawnEquipmentActor: EquipmentDefinition is invalid"));
+		return;
+	}
+
+	if (IsValid(EquipmentActor))
+	{
+		UE_LOG(LogVremEquipment, Warning, TEXT("UVremEquipmentInstance::SpawnEquipmentActor: EquipmentActor already exist"));
 		return;
 	}
 
@@ -165,11 +122,38 @@ void UVremEquipmentInstance::AttachToSocket(const FName& SocketName, const FTran
 		return;
 	}
 
+	EquipmentActor = SpawnedActor;
+}
+
+void UVremEquipmentInstance::AttachToSocket(const FName& SocketName, const FTransform& Offset)
+{
+	if (ParentActor.IsValid() == false)
+	{
+		UE_LOG(LogVremEquipment, Warning, TEXT("UVremEquipmentInstance::AttachToSocket: ParentActor is invalid"));
+		return;
+	}
+
+	// server only
+	check(ParentActor->HasAuthority());
+
+	if (IsValid(EquipmentActor) == false)
+	{
+		UE_LOG(LogVremEquipment, Warning, TEXT("UVremEquipmentInstance::AttachToSocket: EquipmentActor is invalid"));
+		return;
+	}
+
+	if (EquipmentActor->GetAttachParentSocketName() == SocketName &&
+		EquipmentActor->GetRootComponent()->GetRelativeTransform().Equals(Offset))
+	{
+		UE_LOG(LogVremEquipment, Warning, TEXT("UVremEquipmentInstance::AttachToSocket: Already attached to same socket nothing happened"));
+		return;
+	}
+
 	// Attach
 	USkeletalMeshComponent* Mesh = ParentActor->FindComponentByClass<USkeletalMeshComponent>();
 	if (IsValid(Mesh))
 	{
-		SpawnedActor->AttachToComponent(
+		EquipmentActor->AttachToComponent(
 			Mesh,
 			FAttachmentTransformRules::SnapToTargetNotIncludingScale,
 			SocketName
@@ -177,7 +161,47 @@ void UVremEquipmentInstance::AttachToSocket(const FName& SocketName, const FTran
 	}
 
 	// Offset 적용
-	SpawnedActor->SetActorRelativeTransform(Offset);
+	EquipmentActor->SetActorRelativeTransform(Offset);
+}
 
-	EquipmentActor = SpawnedActor;
+
+void UVremEquipmentInstance::ApplyEquipmentState()
+{
+	if (EquipmentDefinition.IsValid() == false)
+	{
+		UE_LOG(LogVremEquipment, Warning, TEXT("UVremEquipmentInstance::ApplyEquipmentState EquipmentDefinition not set NetMode : %s"), *GetNetModeString(GetWorld()));
+		return;
+	}
+
+	// 서버: 소켓 부착 수행
+	// 클라이언트: 소켓 부착은 서버에서 복제되므로 스킵
+	const bool bHasAuthority = ParentActor.IsValid() && ParentActor->HasAuthority();
+
+	UVremEquipmentComponent* EquipmentComponent = ParentActor->GetComponentByClass<UVremEquipmentComponent>();
+	switch (EquipmentState)
+	{
+	case EEquipmentState::Equipped:
+		if (bHasAuthority)
+		{ 
+			AttachToSocket(EquipmentDefinition->AttachSocketName, EquipmentDefinition->AttachOffset);
+		}
+		if (IsValid(EquipmentComponent))
+		{
+			EquipmentComponent->OnEquipmenntAttached.Broadcast(EquipmentDefinition->AnimLayerClass);
+		}
+		break;
+
+	case EEquipmentState::Holstered:
+		if (bHasAuthority)
+		{
+			AttachToSocket(EquipmentDefinition->HolsterSocketName, EquipmentDefinition->HolsterOffset);
+		}
+		if (IsValid(EquipmentComponent))
+		{
+			EquipmentComponent->OnEquipmenntDetached.Broadcast(EquipmentDefinition->AnimLayerClass);
+		}
+		break;
+	default:
+		checkNoEntry();
+	}
 }

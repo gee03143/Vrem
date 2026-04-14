@@ -13,4 +13,7 @@ class VREM_API AVremEquipmentActor : public AActor
 
 public:
 	AVremEquipmentActor();
+
+protected:
+	virtual void BeginPlay() override;
 };

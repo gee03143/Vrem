@@ -426,7 +426,6 @@ void AVremCharacter::OnEquipmentActorAttached(const TSubclassOf<UAnimInstance> I
 		return;
 	}
 
-	UE_LOG(LogVremEquipment, Warning, TEXT("AVremCharacter::OnEquipmentActorAttached NetRole : [%s]"), *GetNetRoleString(this));
 	AnimInstance->SetWeaponAnimLayer(InAnimLayerClass);
 }
 

@@ -10,6 +10,7 @@
 #include "VremEquipmentComponent.generated.h"
 
 class UVremEquipmentComponent;
+class AVremEquipmentActor;
 
 USTRUCT()
 struct FEquipmentEntry : public FFastArraySerializerItem
@@ -19,19 +20,19 @@ struct FEquipmentEntry : public FFastArraySerializerItem
 	UPROPERTY()
 	TWeakObjectPtr<const UVremEquipmentDefinition> EquipmentDefiniton;
 
-	UPROPERTY(Transient)
-	UVremEquipmentInstance* EquipmentInstance;
-
 	UPROPERTY()
-	EEquipmentState EquipmentState = EEquipmentState::Unequipped;
+	EEquipmentState EquipmentState = EEquipmentState::Holstered;
+
+	UPROPERTY()  // 새로 추가 - 복제됨
+	TWeakObjectPtr<AVremEquipmentActor> EquipmentActor;
+
+	UPROPERTY(NotReplicated, Transient)
+	UVremEquipmentInstance* EquipmentInstance;
 
 	UPROPERTY()
 	int32 EquipmentIndex = INDEX_NONE;
 
-	FString ToString() const
-	{
-		return FString::Printf(TEXT("EquipmentIndex: %d ItemId: %s"), EquipmentIndex, *EquipmentDefiniton->GetName());
-	}
+	FString ToString() const;
 
 	void SetAndApplyEquipmentState(EEquipmentState InEquipmentState);
 	void TryApplyEquipmentStateToInstance();
@@ -82,9 +83,11 @@ struct FEquipmentList : public FFastArraySerializer
 	void PostReplicatedAdd(const TArrayView<int32> AddedIndices, int32 FinalSize);
 	void PostReplicatedChange(const TArrayView<int32> ChangedIndices, int32 FinalSize);
 
-	void CreateInstanceForEntry(FEquipmentEntry& Entry);
+	void CreateInstanceForEntry(FEquipmentEntry& Entry, const TCHAR* Caller = TEXT("Unknown"));
 
-    bool NetDeltaSerialize(FNetDeltaSerializeInfo& DeltaParams)
+	void TryBindEquipmentActor(AVremEquipmentActor* InActor);
+
+	bool NetDeltaSerialize(FNetDeltaSerializeInfo& DeltaParams)
     {
         return FastArrayDeltaSerialize<FEquipmentEntry, FEquipmentList>(Entries, DeltaParams, *this);
     }
@@ -94,7 +97,7 @@ private:
     TArray<FEquipmentEntry> Entries;
 
 	TWeakObjectPtr<UVremEquipmentComponent> OwnerComponent = nullptr;
-	TArray<FEquipmentEntry> PendingEntriesForCreateInstance;
+	TArray<int32> PendingEquipmentIndices;
 };
 
 template<>
@@ -121,10 +124,12 @@ public:
 public:
 	void SetCurrentWeapon(int32 InWeaponSlotIndex);
 	int32 GetEquipmentItemNum() const { return EquipmentList.GetNumEntries(); }
+	FString GetEquipmentListString() const { return EquipmentList.ToString(); }
 
 	void TryEquipItem(const UVremEquipmentDefinition* ItemToEquip, int32 InSlotIndex);
 	void TryUnequipItem(int32 InSlotIndex);
 
+	void OnEquipmentActorReplicated(AVremEquipmentActor* InActor);
 public:
 	DECLARE_MULTICAST_DELEGATE_OneParam(FOnEquipmentChanged, const TSubclassOf<UAnimInstance>)
 	FOnEquipmentChanged OnEquipmenntAttached;

@@ -18,4 +18,6 @@ public:
 	UFUNCTION(exec)
 	void TestAssetSyncLoad();
 	
+	UFUNCTION(exec)
+	void PrintEquipmentList();
 };

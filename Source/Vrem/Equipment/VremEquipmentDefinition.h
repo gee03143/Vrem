@@ -16,7 +16,6 @@ enum class EEquipmentState : uint8
 {
 	Equipped,
 	Holstered,
-	Unequipped
 };
 
 UCLASS()
@@ -74,16 +73,18 @@ public:
 	void SetEquipmentState(EEquipmentState InEquipmentState);
 	EEquipmentState GetEquipmentState() const { return EquipmentState; }
 
+	void BindEquipmentActor(AVremEquipmentActor* InActor);
+	AVremEquipmentActor* GetEquipmentActor() const { return EquipmentActor; }
+
+	void SpawnEquipmentActor();
 protected:
-	void ApplyEquipmentState();
 	void AttachToSocket(const FName& SocketName, const FTransform& Offset);
-	void RemoveEquipmentActor();
+	void ApplyEquipmentState();
 
 protected:
 	UPROPERTY(Transient)
 	TWeakObjectPtr<const UVremEquipmentDefinition> EquipmentDefinition;
 
-	// 클라에서는 항상 nullptr
 	UPROPERTY(Transient)
 	TObjectPtr<AVremEquipmentActor> EquipmentActor;
 
