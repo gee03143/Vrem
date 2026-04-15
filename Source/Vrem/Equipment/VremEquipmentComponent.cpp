@@ -173,6 +173,7 @@ void FEquipmentList::CreateInstanceForEntry(FEquipmentEntry& Entry, const TCHAR*
 	const bool bHasAuthority = IsValid(OwnerActor) && OwnerActor->HasAuthority();
 
 	Entry.EquipmentInstance = NewObject<UVremEquipmentInstance>(OwnerComponent.Get());
+	Entry.EquipmentInstance->OnStateChanged.AddUObject(OwnerComponent.Get(), &UVremEquipmentComponent::OnInstanceStateChanged);
 	Entry.EquipmentInstance->Initialize(Entry.EquipmentDefiniton.Get(), OwnerActor);
 
 	if (bHasAuthority)
@@ -283,6 +284,19 @@ void UVremEquipmentComponent::TryUnequipItem(int32 InSlotIndex)
 void UVremEquipmentComponent::OnEquipmentActorReplicated(AVremEquipmentActor* InActor)
 {
 	EquipmentList.TryBindEquipmentActor(InActor);
+}
+
+void UVremEquipmentComponent::OnInstanceStateChanged(EEquipmentState NewState, TSubclassOf<UAnimInstance> AnimLayerClass)
+{
+	switch (NewState)
+	{
+	case EEquipmentState::Equipped:
+		OnEquipmenntAttached.Broadcast(AnimLayerClass);
+		break;
+	case EEquipmentState::Holstered:
+		OnEquipmenntDetached.Broadcast(AnimLayerClass);
+		break;
+	}
 }
 
 void UVremEquipmentComponent::OnRep_EquipmentList()

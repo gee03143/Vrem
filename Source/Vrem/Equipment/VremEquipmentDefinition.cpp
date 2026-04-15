@@ -5,7 +5,6 @@
 #include "VremEquipmentActor.h"
 #include "Vrem/VremLogChannels.h"
 #include "Kismet/GameplayStatics.h"
-#include "VremEquipmentComponent.h"
 
 // =======================================
 // UVremEquipmentInstance
@@ -177,7 +176,6 @@ void UVremEquipmentInstance::ApplyEquipmentState()
 	// 클라이언트: 소켓 부착은 서버에서 복제되므로 스킵
 	const bool bHasAuthority = ParentActor.IsValid() && ParentActor->HasAuthority();
 
-	UVremEquipmentComponent* EquipmentComponent = ParentActor->GetComponentByClass<UVremEquipmentComponent>();
 	switch (EquipmentState)
 	{
 	case EEquipmentState::Equipped:
@@ -185,10 +183,7 @@ void UVremEquipmentInstance::ApplyEquipmentState()
 		{ 
 			AttachToSocket(EquipmentDefinition->AttachSocketName, EquipmentDefinition->AttachOffset);
 		}
-		if (IsValid(EquipmentComponent))
-		{
-			EquipmentComponent->OnEquipmenntAttached.Broadcast(EquipmentDefinition->AnimLayerClass);
-		}
+		OnStateChanged.Broadcast(EquipmentState, EquipmentDefinition->AnimLayerClass);
 		break;
 
 	case EEquipmentState::Holstered:
@@ -196,10 +191,7 @@ void UVremEquipmentInstance::ApplyEquipmentState()
 		{
 			AttachToSocket(EquipmentDefinition->HolsterSocketName, EquipmentDefinition->HolsterOffset);
 		}
-		if (IsValid(EquipmentComponent))
-		{
-			EquipmentComponent->OnEquipmenntDetached.Broadcast(EquipmentDefinition->AnimLayerClass);
-		}
+		OnStateChanged.Broadcast(EquipmentState, EquipmentDefinition->AnimLayerClass);
 		break;
 	default:
 		checkNoEntry();

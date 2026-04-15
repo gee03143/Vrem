@@ -19,22 +19,6 @@ enum class EEquipmentState : uint8
 };
 
 UCLASS()
-class UItemFragment_Equipment : public UItemFragment
-{
-    GENERATED_BODY()
-
-public:
-	const UVremEquipmentDefinition* GetEquipmentDefinition() const 
-	{ 
-		return EquipmentDefinition.Get();
-	}
-
-protected:
-	UPROPERTY(EditDefaultsOnly)
-	TObjectPtr<const UVremEquipmentDefinition> EquipmentDefinition;
-};
-
-UCLASS()
 class VREM_API UVremEquipmentDefinition : public UDataAsset
 {
 	GENERATED_BODY()
@@ -80,6 +64,10 @@ public:
 protected:
 	void AttachToSocket(const FName& SocketName, const FTransform& Offset);
 	void ApplyEquipmentState();
+
+public:
+	DECLARE_MULTICAST_DELEGATE_TwoParams(FOnEquipmentInstanceStateChanged, EEquipmentState /*NewState*/, TSubclassOf<UAnimInstance> /*AnimLayerClass*/)
+	FOnEquipmentInstanceStateChanged OnStateChanged;
 
 protected:
 	UPROPERTY(Transient)

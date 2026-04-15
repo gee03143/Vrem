@@ -2,10 +2,11 @@
 
 
 #include "VremInventoryComponent.h"
-#include "Vrem/Inventory/VremItemDefinition.h"
+#include "VremItemDefinition.h"
 #include "Net/UnrealNetwork.h"
 #include "Vrem/VremLogChannels.h"
 #include "Vrem/VremAssetManager.h"
+#include "Vrem/Equipment/ItemFragment_Equipment.h"
 
 // temp...
 #include "Vrem/Equipment/VremEquipmentDefinition.h"

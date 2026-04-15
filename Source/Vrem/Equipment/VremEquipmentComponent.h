@@ -114,6 +114,8 @@ class VREM_API UVremEquipmentComponent : public UActorComponent
 {
 	GENERATED_BODY()
 
+	friend struct FEquipmentList;
+
 public:	
 	// Sets default values for this component's properties
 	UVremEquipmentComponent();
@@ -130,6 +132,10 @@ public:
 	void TryUnequipItem(int32 InSlotIndex);
 
 	void OnEquipmentActorReplicated(AVremEquipmentActor* InActor);
+
+protected:
+	void OnInstanceStateChanged(EEquipmentState NewState, TSubclassOf<UAnimInstance> AnimLayerClass);
+
 public:
 	DECLARE_MULTICAST_DELEGATE_OneParam(FOnEquipmentChanged, const TSubclassOf<UAnimInstance>)
 	FOnEquipmentChanged OnEquipmenntAttached;
