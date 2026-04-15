@@ -133,6 +133,15 @@ public:
 
 	void OnEquipmentActorReplicated(AVremEquipmentActor* InActor);
 
+	UFUNCTION(Server, Reliable)
+	void ServerTryEquipItem(const UVremEquipmentDefinition* ItemToEquip, int32 InSlotIndex);
+
+	UFUNCTION(Server, Reliable)
+	void ServerTryUnequipItem(int32 InSlotIndex);
+
+	UFUNCTION(Server, Reliable)
+	void ServerSetCurrentWeapon(int32 InSlotIndex);
+
 protected:
 	void OnInstanceStateChanged(EEquipmentState NewState, TSubclassOf<UAnimInstance> AnimLayerClass);
 

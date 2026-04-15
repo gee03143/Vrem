@@ -4,7 +4,13 @@
 #include "VremPlayerController.h"
 #include "EnhancedInputSubsystems.h"
 #include "Vrem/VremLogChannels.h"
+#include "Vrem/Cheat/VremCheatManager.h"
 #include "InputMappingContext.h"
+
+AVremPlayerController::AVremPlayerController()
+{
+	CheatClass = UVremCheatManager::StaticClass();
+}
 
 void AVremPlayerController::BeginPlay()
 {

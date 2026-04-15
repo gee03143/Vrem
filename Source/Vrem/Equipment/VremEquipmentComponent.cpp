@@ -286,6 +286,21 @@ void UVremEquipmentComponent::OnEquipmentActorReplicated(AVremEquipmentActor* In
 	EquipmentList.TryBindEquipmentActor(InActor);
 }
 
+void UVremEquipmentComponent::ServerTryEquipItem_Implementation(const UVremEquipmentDefinition* ItemToEquip, int32 InSlotIndex)
+{
+	TryEquipItem(ItemToEquip, InSlotIndex);
+}
+
+void UVremEquipmentComponent::ServerTryUnequipItem_Implementation(int32 InSlotIndex)
+{
+	TryUnequipItem(InSlotIndex);
+}
+
+void UVremEquipmentComponent::ServerSetCurrentWeapon_Implementation(int32 InSlotIndex)
+{
+	SetCurrentWeapon(InSlotIndex);
+}
+
 void UVremEquipmentComponent::OnInstanceStateChanged(EEquipmentState NewState, TSubclassOf<UAnimInstance> AnimLayerClass)
 {
 	switch (NewState)

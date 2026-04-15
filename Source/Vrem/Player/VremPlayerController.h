@@ -17,6 +17,8 @@ class VREM_API AVremPlayerController : public APlayerController
 {
 	GENERATED_BODY()
 
+public:
+	AVremPlayerController();
 protected:
 	virtual void BeginPlay() override;
 
