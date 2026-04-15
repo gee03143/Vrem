@@ -5,6 +5,7 @@
 #include "CoreMinimal.h"
 #include "Components/ActorComponent.h"
 #include "Net/Serialization/FastArraySerializer.h"
+#include "VremItemDefinition.h"
 #include "VremInventoryComponent.generated.h"
 
 class UVremItemDefinition;
@@ -20,7 +21,7 @@ struct FInventoryEntry : public FFastArraySerializerItem
     FPrimaryAssetId ItemId;
 
     UPROPERTY()
-    int32 Count;
+    int32 Count = 0;
 
 	UVremItemInstance* ItemInstance;
 
@@ -84,7 +85,7 @@ private:
     TArray<FInventoryEntry> Entries;
 
 	UVremInventoryComponent* OwnerComponent = nullptr;
-	TArray<FInventoryEntry> PendingEntriesForCreateInstance;
+	TArray<FPrimaryAssetId> PendingIdsForCreateInstance;
 };
 
 template<>
@@ -119,10 +120,14 @@ protected:
 	UFUNCTION()
 	void OnRep_InventoryItems();
 
-protected:
+public:
 	DECLARE_MULTICAST_DELEGATE(FOnInventoryChanged);
 	FOnInventoryChanged OnInventoryChanged;
 
+	DECLARE_MULTICAST_DELEGATE_OneParam(FOnItemInstanceCreated, UVremItemInstance* /*ItemInstance*/)
+	FOnItemInstanceCreated OnItemInstanceCreated;
+
+protected:
 	UPROPERTY(EditDefaultsOnly)
 	TArray<UVremItemDefinition*> DefaultItemDefinitions; 
 

@@ -20,6 +20,7 @@
 #include "Vrem/Inventory/VremInventoryComponent.h"
 #include "Vrem/Equipment/VremEquipmentComponent.h"
 #include "Vrem/Equipment/VremEquipmentDefinition.h"
+#include "Vrem/Equipment/ItemFragment_Equipment.h"
 #include "Vrem/Animation/VremAnimInstance.h"
 
 // temp
@@ -127,6 +128,11 @@ void AVremCharacter::EndPlay(const EEndPlayReason::Type EndPlayReason)
 void AVremCharacter::PostInitializeComponents()
 {
 	Super::PostInitializeComponents();
+
+	if (IsValid(InventoryComponent) && HasAuthority())
+	{
+		InventoryComponent->OnItemInstanceCreated.AddUObject(this, &ThisClass::OnItemInstanceCreated);
+	}
 	
 	if (IsValid(EquipmentComponent) && GetNetMode() != NM_DedicatedServer)
 	{
@@ -408,6 +414,30 @@ void AVremCharacter::TryBindInputByInputConfig()
 	else
 	{
 		UE_LOG(LogVremInput, Warning, TEXT("AVremCharacter::SetupPlayerInputComponent EnhancedInputComponent Is Invalid! NetRole : [%s]"), *GetNetRoleString(this));
+	}
+}
+
+void AVremCharacter::OnItemInstanceCreated(UVremItemInstance* ItemInstance)
+{
+	// server only
+	check(HasAuthority());
+
+	UE_LOG(LogVremInventory, Warning, TEXT("AVremCharacter::OnItemInstanceCreated"));
+
+	const bool bHasEquipped = EquipmentComponent->GetEquipmentItemNum() > 0;
+
+	UItemFragment_Equipment* EquipmentFragment = ItemInstance->FindFragment<UItemFragment_Equipment>();
+	if (EquipmentFragment)
+	{
+		EquipmentComponent->TryEquipItem(
+			EquipmentFragment->GetEquipmentDefinition(),
+			EquipmentComponent->GetEquipmentItemNum() + 1
+		);
+	}
+
+	if (bHasEquipped == false)
+	{
+		EquipmentComponent->SetCurrentWeapon(1);
 	}
 }
 

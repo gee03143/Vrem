@@ -2,15 +2,10 @@
 
 
 #include "VremInventoryComponent.h"
-#include "VremItemDefinition.h"
 #include "Net/UnrealNetwork.h"
 #include "Vrem/VremLogChannels.h"
 #include "Vrem/VremAssetManager.h"
 #include "Vrem/Equipment/ItemFragment_Equipment.h"
-
-// temp...
-#include "Vrem/Equipment/VremEquipmentDefinition.h"
-#include "Vrem/Equipment/VremEquipmentComponent.h"
 
 
 // =======================================
@@ -20,14 +15,17 @@ void FInventoryList::SetOwner(UVremInventoryComponent* InOwner)
 {
 	OwnerComponent = InOwner;
 
-	for (int32 i = PendingEntriesForCreateInstance.Num() - 1; i >= 0; --i)
+	for (int32 i = PendingIdsForCreateInstance.Num() - 1; i >= 0; --i)
 	{
-		FInventoryEntry& Entry = PendingEntriesForCreateInstance[i];
-		CreateInstanceForEntry(Entry);
+		FInventoryEntry* Entry = GetEntryFromId(PendingIdsForCreateInstance[i]);
+		if (Entry)
+		{ 
+			CreateInstanceForEntry(*Entry);
 
-		if (IsValid(Entry.ItemInstance))
-		{
-			PendingEntriesForCreateInstance.RemoveAt(i);
+			if (IsValid(Entry->ItemInstance))
+			{
+				PendingIdsForCreateInstance.RemoveAt(i);
+			}
 		}
 	}
 }
@@ -91,7 +89,7 @@ void FInventoryList::PostReplicatedAdd(const TArrayView<int32> AddedIndices, int
 		}
 		else
 		{
-			PendingEntriesForCreateInstance.AddUnique(Entry);
+			PendingIdsForCreateInstance.AddUnique(Entry.ItemId);
 		}
 	}
 }
@@ -108,7 +106,7 @@ void FInventoryList::PostReplicatedChange(const TArrayView<int32> ChangedIndices
 		}
 		else
 		{
-			PendingEntriesForCreateInstance.AddUnique(Entry);
+			PendingIdsForCreateInstance.AddUnique(Entry.ItemId);
 		}
 	}
 }
@@ -135,23 +133,7 @@ void FInventoryList::CreateInstanceForEntry(FInventoryEntry& Entry)
 		Entry.ItemInstance = NewObject<UVremItemInstance>(OwnerComponent);
 		Entry.ItemInstance->OnItemCreated(ItemDef);
 
-		// temp code...
-		{
-
-			if (OwnerComponent->GetOwner()->HasAuthority())
-			{
-				UItemFragment_Equipment* EquipmentFragment = Entry.ItemInstance->FindFragment<UItemFragment_Equipment>();
-				if (IsValid(EquipmentFragment))
-				{
-					UVremEquipmentComponent* EquipmentComponent = OwnerComponent->GetOwner()->GetComponentByClass<UVremEquipmentComponent>();
-					EquipmentComponent->TryEquipItem(EquipmentFragment->GetEquipmentDefinition(), EquipmentComponent->GetEquipmentItemNum() + 1);
-				}
-				else
-				{
-					UE_LOG(LogVremInventory, Warning, TEXT("CreateInstanceForEntry cannot find EquipmentFragment"));
-				}
-			}
-		}
+		OwnerComponent->OnItemInstanceCreated.Broadcast(Entry.ItemInstance);
 
 		MarkItemDirty(Entry);
 	}
@@ -213,12 +195,6 @@ void UVremInventoryComponent::InitializeDefaultItems()
 	for (const UVremItemDefinition* Def : DefaultItemDefinitions)
 	{
 		AddItemToInventory(Def);
-	}
-
-	// temp code...
-	{
-		UVremEquipmentComponent* EquipmentComponent = GetOwner()->GetComponentByClass<UVremEquipmentComponent>();
-		EquipmentComponent->SetCurrentWeapon(1);
 	}
 }
 

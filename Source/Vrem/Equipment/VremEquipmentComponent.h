@@ -27,7 +27,7 @@ struct FEquipmentEntry : public FFastArraySerializerItem
 	TWeakObjectPtr<AVremEquipmentActor> EquipmentActor;
 
 	UPROPERTY(NotReplicated, Transient)
-	UVremEquipmentInstance* EquipmentInstance;
+	UVremEquipmentInstance* EquipmentInstance = nullptr;
 
 	UPROPERTY()
 	int32 EquipmentIndex = INDEX_NONE;

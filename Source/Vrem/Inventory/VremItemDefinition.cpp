@@ -41,7 +41,7 @@ void UVremItemInstance::OnItemRemoved()
 	{
 		if (Fragment)
 		{
-			Fragment->OnItemCreated(this);
+			Fragment->OnItemRemoved(this);
 		}
 	}
 }

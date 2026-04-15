@@ -72,6 +72,7 @@ protected:
 
 #pragma region weaponsystem
 protected:
+	void OnItemInstanceCreated(class UVremItemInstance* ItemInstance);
 	void OnEquipmentActorAttached(const TSubclassOf<UAnimInstance> InAnimLayerClass);
 	void OnEquipmentActorDetached(const TSubclassOf<UAnimInstance> InAnimLayerClass);
 
