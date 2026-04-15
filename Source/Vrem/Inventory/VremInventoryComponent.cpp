@@ -20,7 +20,10 @@ void FInventoryList::SetOwner(UVremInventoryComponent* InOwner)
 		FInventoryEntry* Entry = GetEntryFromId(PendingIdsForCreateInstance[i]);
 		if (Entry)
 		{ 
-			CreateInstanceForEntry(*Entry);
+			if (Entry->ItemInstance == nullptr)
+			{
+				CreateInstanceForEntry(*Entry);
+			}
 
 			if (IsValid(Entry->ItemInstance))
 			{
@@ -64,9 +67,12 @@ void FInventoryList::RemoveEntry(const FPrimaryAssetId& ItemToRemove)
 			Entries[i].Count--;
 			if (Entries[i].Count <= 0)
 			{
+				const FPrimaryAssetId RemovedItemId = Entries[i].ItemId;
 				Entries[i].ItemInstance->OnItemRemoved();
 				Entries.RemoveAt(i);
 				MarkArrayDirty();
+
+				OwnerComponent->OnItemInstanceRemoved.Broadcast(RemovedItemId);
 			}
 			else
 			{
@@ -85,7 +91,10 @@ void FInventoryList::PostReplicatedAdd(const TArrayView<int32> AddedIndices, int
 
 		if (OwnerComponent)
 		{
-			CreateInstanceForEntry(Entry);
+			if (Entry.ItemInstance == nullptr)
+			{
+				CreateInstanceForEntry(Entry);
+			}
 		}
 		else
 		{
@@ -102,7 +111,10 @@ void FInventoryList::PostReplicatedChange(const TArrayView<int32> ChangedIndices
 
 		if (OwnerComponent)
 		{
-			CreateInstanceForEntry(Entry);
+			if (Entry.ItemInstance == nullptr)
+			{
+				CreateInstanceForEntry(Entry);
+			}
 		}
 		else
 		{
@@ -185,10 +197,18 @@ void UVremInventoryComponent::RemoveItemFromInventory(const UVremItemDefinition*
 	OnInventoryChanged.Broadcast();
 }
 
+void UVremInventoryComponent::ServerAddItemToInventory_Implementation(const UVremItemDefinition* ItemToAdd)
+{
+	AddItemToInventory(ItemToAdd);
+}
+
+void UVremInventoryComponent::ServerRemoveItemFromInventory_Implementation(const UVremItemDefinition* ItemToRemove)
+{
+	RemoveItemFromInventory(ItemToRemove);
+}
+
 void UVremInventoryComponent::InitializeDefaultItems()
 {
-	UE_LOG(LogVremInventory, Warning, TEXT("UVremInventoryComponent::InitializeDefaultItems"));
-
 	check(IsValid(GetOwner()));
 	check(GetOwner()->HasAuthority());
 

@@ -45,7 +45,23 @@ class VREM_API UVremItemDefinition : public UPrimaryDataAsset
 public:
     UPROPERTY(EditDefaultsOnly, Instanced)
     TArray<UItemFragment*> Fragments;
+
+	template<typename T>
+	T* FindFragment() const;
 };
+
+template<typename T>
+T* UVremItemDefinition::FindFragment() const
+{
+	for (UItemFragment* Fragment : Fragments)
+	{
+		if (T* Typed = Cast<T>(Fragment))
+		{
+			return Typed;
+		}
+	}
+	return nullptr;
+}
 
 UCLASS()
 class VREM_API UVremItemInstance : public UObject

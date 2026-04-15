@@ -149,6 +149,18 @@ void FEquipmentList::PostReplicatedChange(const TArrayView<int32> ChangedIndices
 	}
 }
 
+void FEquipmentList::PreReplicatedRemove(const TArrayView<int32>& RemovedIndices, int32 FinalSize)
+{
+	for (int32 Index : RemovedIndices)
+	{
+		FEquipmentEntry& Entry = Entries[Index];
+		if (IsValid(Entry.EquipmentInstance))
+		{
+			Entry.EquipmentInstance->Cleanup();
+		}
+	}
+}
+
 void FEquipmentList::CreateInstanceForEntry(FEquipmentEntry& Entry, const TCHAR* Caller)
 {
 	if (OwnerComponent.IsValid() == false)
@@ -174,6 +186,7 @@ void FEquipmentList::CreateInstanceForEntry(FEquipmentEntry& Entry, const TCHAR*
 
 	Entry.EquipmentInstance = NewObject<UVremEquipmentInstance>(OwnerComponent.Get());
 	Entry.EquipmentInstance->OnStateChanged.AddUObject(OwnerComponent.Get(), &UVremEquipmentComponent::OnInstanceStateChanged);
+	Entry.EquipmentInstance->OnInstanceDestroyed.AddUObject(OwnerComponent.Get(), &UVremEquipmentComponent::OnInstanceDestroyed);
 	Entry.EquipmentInstance->Initialize(Entry.EquipmentDefiniton.Get(), OwnerActor);
 
 	if (bHasAuthority)
@@ -281,6 +294,18 @@ void UVremEquipmentComponent::TryUnequipItem(int32 InSlotIndex)
 	EquipmentList.RemoveEntry(InSlotIndex);
 }
 
+void UVremEquipmentComponent::TryUnequipItem(const UVremEquipmentDefinition* InEquipmentDefinition)
+{
+	check(IsValid(GetOwner()));
+	check(GetOwner()->HasAuthority());
+
+	int32 SlotIndex = EquipmentList.FindIndexByDefinition(InEquipmentDefinition);
+	if (SlotIndex != INDEX_NONE)
+	{
+		TryUnequipItem(SlotIndex);
+	}
+}
+
 void UVremEquipmentComponent::OnEquipmentActorReplicated(AVremEquipmentActor* InActor)
 {
 	EquipmentList.TryBindEquipmentActor(InActor);
@@ -312,6 +337,11 @@ void UVremEquipmentComponent::OnInstanceStateChanged(EEquipmentState NewState, T
 		OnEquipmenntDetached.Broadcast(AnimLayerClass);
 		break;
 	}
+}
+
+void UVremEquipmentComponent::OnInstanceDestroyed(TSubclassOf<UAnimInstance> AnimLayerClass)
+{
+	OnEquipmenntDetached.Broadcast(AnimLayerClass);
 }
 
 void UVremEquipmentComponent::OnRep_EquipmentList()

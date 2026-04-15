@@ -30,6 +30,11 @@ void UVremEquipmentInstance::Cleanup()
 		EquipmentActor->Destroy();
 	}
 
+	if (EquipmentDefinition.IsValid())
+	{
+		OnInstanceDestroyed.Broadcast(EquipmentDefinition->AnimLayerClass);
+	}
+
 	EquipmentActor = nullptr;
 	EquipmentDefinition = nullptr;
 	ParentActor = nullptr;
@@ -37,8 +42,9 @@ void UVremEquipmentInstance::Cleanup()
 
 void UVremEquipmentInstance::BeginDestroy()
 {
-	Super::BeginDestroy();
 	Cleanup();
+
+	Super::BeginDestroy();
 }
 
 void UVremEquipmentInstance::SetEquipmentState(EEquipmentState InEquipmentState)

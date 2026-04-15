@@ -23,6 +23,19 @@ public:
 	void TestAssetSyncLoad();
 	
 
+#pragma region InventorySystem
+public:
+	void TestAddItem(const FString& ItemPath);
+	void TestRemoveItem(const FString& ItemPath);
+
+	void PrintInventoryList();
+private:
+	void AddItem_Command(const TArray<FString>& Args);
+	void RemoveItem_Command(const TArray<FString>& Args);
+	void PrintInventoryList_Command(const TArray<FString>& Args);
+	
+#pragma endregion InventorySystem
+
 #pragma region EquipmentSystem
 public:
 	void TestEquipItem(int32 SlotIndex, const FString& EquipmentDefinitionPath);
@@ -35,11 +48,6 @@ private:
 	void EquipItem_Command(const TArray<FString>& Args);
 	void UnequipItem_Command(const TArray<FString>& Args);
 	void PrintEquipmentList_Command(const TArray<FString>& Args);
-
-	FString MakeEquipmentDefinitionPath(const FString& AssetName)
-	{
-		return FString::Printf(TEXT("/Game/Weapons/EquipmentDefinition/%s.%s"), *AssetName, *AssetName);
-	}
 
 #pragma endregion EquipmentSystem
 

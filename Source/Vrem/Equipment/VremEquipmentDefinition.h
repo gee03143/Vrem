@@ -69,6 +69,9 @@ public:
 	DECLARE_MULTICAST_DELEGATE_TwoParams(FOnEquipmentInstanceStateChanged, EEquipmentState /*NewState*/, TSubclassOf<UAnimInstance> /*AnimLayerClass*/)
 	FOnEquipmentInstanceStateChanged OnStateChanged;
 
+	DECLARE_MULTICAST_DELEGATE_OneParam(FOnEquipmentInstanceDestroyed, TSubclassOf<UAnimInstance> /*AnimLayerClass*/)
+	FOnEquipmentInstanceDestroyed OnInstanceDestroyed;
+
 protected:
 	UPROPERTY(Transient)
 	TWeakObjectPtr<const UVremEquipmentDefinition> EquipmentDefinition;

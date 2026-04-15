@@ -60,6 +60,7 @@ struct FInventoryList : public FFastArraySerializer
 	FString ToString() const
 	{
 		FString Result;
+		Result += FString::Printf(TEXT("Inventory Component\n"));
 		Result += FString::Printf(TEXT("Num Entries - %d\n"), Entries.Num());
 
 		for (const FInventoryEntry& Entry : Entries)
@@ -113,7 +114,12 @@ public:
 public:
 	void AddItemToInventory(const UVremItemDefinition* ItemToAdd);
 	void RemoveItemFromInventory(const UVremItemDefinition* ItemToRemove);
+	FString GetInventoryItemsString() const { return InventoryItems.ToString(); }
 
+	UFUNCTION(Server, Reliable)
+	void ServerAddItemToInventory(const UVremItemDefinition* ItemToAdd);
+	UFUNCTION(Server, Reliable)
+	void ServerRemoveItemFromInventory(const UVremItemDefinition* ItemToRemove);
 protected:
 	void InitializeDefaultItems();
 
@@ -126,6 +132,9 @@ public:
 
 	DECLARE_MULTICAST_DELEGATE_OneParam(FOnItemInstanceCreated, UVremItemInstance* /*ItemInstance*/)
 	FOnItemInstanceCreated OnItemInstanceCreated;
+
+	DECLARE_MULTICAST_DELEGATE_OneParam(FOnItemInstanceRemoved, const FPrimaryAssetId& /*ItemId*/)
+	FOnItemInstanceRemoved OnItemInstanceRemoved;
 
 protected:
 	UPROPERTY(EditDefaultsOnly)

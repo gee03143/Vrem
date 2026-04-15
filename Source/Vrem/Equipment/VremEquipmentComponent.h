@@ -62,6 +62,18 @@ struct FEquipmentList : public FFastArraySerializer
 		return FoundEntry;
 	}
 
+	int32 FindIndexByDefinition(const UVremEquipmentDefinition* InDefinition)
+	{
+		for (const FEquipmentEntry& Entry : Entries)
+		{
+			if (Entry.EquipmentDefiniton.Get() == InDefinition)
+			{
+				return Entry.EquipmentIndex;
+			}
+		}
+		return INDEX_NONE;
+	}
+
 	void AddEntry(const UVremEquipmentDefinition* InEquipmentDefinition, int32 InIndex);
 	void RemoveEntry(int32 InIndex);
 	int32 GetNumEntries() const { return Entries.Num(); }
@@ -82,6 +94,7 @@ struct FEquipmentList : public FFastArraySerializer
 
 	void PostReplicatedAdd(const TArrayView<int32> AddedIndices, int32 FinalSize);
 	void PostReplicatedChange(const TArrayView<int32> ChangedIndices, int32 FinalSize);
+	void PreReplicatedRemove(const TArrayView<int32>& RemovedIndices, int32 FinalSize);
 
 	void CreateInstanceForEntry(FEquipmentEntry& Entry, const TCHAR* Caller = TEXT("Unknown"));
 
@@ -130,6 +143,7 @@ public:
 
 	void TryEquipItem(const UVremEquipmentDefinition* ItemToEquip, int32 InSlotIndex);
 	void TryUnequipItem(int32 InSlotIndex);
+	void TryUnequipItem(const UVremEquipmentDefinition* InEquipmentDefinition);
 
 	void OnEquipmentActorReplicated(AVremEquipmentActor* InActor);
 
@@ -144,7 +158,7 @@ public:
 
 protected:
 	void OnInstanceStateChanged(EEquipmentState NewState, TSubclassOf<UAnimInstance> AnimLayerClass);
-
+	void OnInstanceDestroyed(TSubclassOf<UAnimInstance> AnimLayerClass);
 public:
 	DECLARE_MULTICAST_DELEGATE_OneParam(FOnEquipmentChanged, const TSubclassOf<UAnimInstance>)
 	FOnEquipmentChanged OnEquipmenntAttached;

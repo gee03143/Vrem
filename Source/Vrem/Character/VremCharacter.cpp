@@ -25,6 +25,7 @@
 
 // temp
 #include "Components/ArrowComponent.h"
+#include "../VremAssetManager.h"
 
 static TAutoConsoleVariable<int32> CVarDebugCharacterInput(
 	TEXT("vrem.DebugCharacterInput"),
@@ -132,6 +133,7 @@ void AVremCharacter::PostInitializeComponents()
 	if (IsValid(InventoryComponent) && HasAuthority())
 	{
 		InventoryComponent->OnItemInstanceCreated.AddUObject(this, &ThisClass::OnItemInstanceCreated);
+		InventoryComponent->OnItemInstanceRemoved.AddUObject(this, &ThisClass::OnItemInstanceRemoved);
 	}
 	
 	if (IsValid(EquipmentComponent) && GetNetMode() != NM_DedicatedServer)
@@ -441,6 +443,30 @@ void AVremCharacter::OnItemInstanceCreated(UVremItemInstance* ItemInstance)
 	}
 }
 
+void AVremCharacter::OnItemInstanceRemoved(const FPrimaryAssetId& ItemId)
+{
+	UVremAssetManager& Manager = UVremAssetManager::Get();
+	UVremItemDefinition* ItemDef = Manager.GetItemDefinition(ItemId);
+	if (IsValid(ItemDef) == false)
+	{
+		UE_LOG(LogVremEquipment, Warning, TEXT("AVremCharacter::OnItemInstanceRemoved Failed to get ItemDefinition"));
+		return;
+	}
+
+	UItemFragment_Equipment* EquipmentFragment = ItemDef->FindFragment<UItemFragment_Equipment>();
+	if (IsValid(EquipmentFragment) == false)
+	{
+		UE_LOG(LogVremEquipment, Warning, TEXT("AVremCharacter::OnItemInstanceRemoved Item Has no ItemFragment_Equipment"));
+		return;
+	}
+
+	const UVremEquipmentDefinition* EquipDef = EquipmentFragment->GetEquipmentDefinition();
+	if (IsValid(EquipDef))
+	{
+		EquipmentComponent->TryUnequipItem(EquipDef);
+	}
+}
+
 void AVremCharacter::OnEquipmentActorAttached(const TSubclassOf<UAnimInstance> InAnimLayerClass)
 {
 	if (InAnimLayerClass == nullptr)
@@ -460,7 +486,8 @@ void AVremCharacter::OnEquipmentActorAttached(const TSubclassOf<UAnimInstance> I
 }
 
 void AVremCharacter::OnEquipmentActorDetached(const TSubclassOf<UAnimInstance> InAnimLayerClass)
-{
+{	
+	UE_LOG(LogVremEquipment, Warning, TEXT("AVremCharacter::OnEquipmentActorDetached"));
 	if (InAnimLayerClass == nullptr)
 	{
 		UE_LOG(LogVremEquipment, Warning, TEXT("AVremCharacter::OnEquipmentActorDetached AnimLayerClass is nullptr"));
