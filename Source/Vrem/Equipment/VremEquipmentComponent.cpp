@@ -273,6 +273,17 @@ void UVremEquipmentComponent::SetCurrentWeapon(int32 InWeaponSlotIndex)
 	}
 }
 
+AVremEquipmentActor* UVremEquipmentComponent::GetCurrentEquipmentActor() const
+{
+	const FEquipmentEntry* Entry = EquipmentList.GetEntryFromIndex(CurrentWeaponSlotIndex);
+	if (Entry == nullptr)
+	{
+		return nullptr;
+	}
+
+	return Entry->EquipmentActor.Get();
+}
+
 void UVremEquipmentComponent::TryEquipItem(const UVremEquipmentDefinition* ItemToEquip, int32 InSlotIndex)
 {
 	check(IsValid(GetOwner()));

@@ -21,24 +21,15 @@
 #include "Vrem/Equipment/VremEquipmentComponent.h"
 #include "Vrem/Equipment/VremEquipmentDefinition.h"
 #include "Vrem/Equipment/ItemFragment_Equipment.h"
+#include "Vrem/Equipment/VremEquipmentActor.h"
+#include "Vrem/Equipment/Weapon/VremWeaponComponent.h"
 #include "Vrem/Animation/VremAnimInstance.h"
-
-// temp
-#include "Components/ArrowComponent.h"
-#include "../VremAssetManager.h"
+#include "Vrem/VremAssetManager.h"
 
 static TAutoConsoleVariable<int32> CVarDebugCharacterInput(
 	TEXT("vrem.DebugCharacterInput"),
 	0,
 	TEXT("Enable Character Input Debug\n")
-	TEXT("0: Off\n")
-	TEXT("1: On"),
-	ECVF_Cheat);
-
-static TAutoConsoleVariable<int32> CVarDebugCharacterShooting(
-	TEXT("vrem.DebugCharacterShooting"),
-	0,
-	TEXT("Enable Character Shooting Debug\n")
 	TEXT("0: Off\n")
 	TEXT("1: On"),
 	ECVF_Cheat);
@@ -68,13 +59,6 @@ AVremCharacter::AVremCharacter()
 	InventoryComponent = CreateDefaultSubobject<UVremInventoryComponent>(TEXT("InventoryComponent"));
 
 	EquipmentComponent = CreateDefaultSubobject<UVremEquipmentComponent>(TEXT("EquipmentComponent"));
-	// temp code
-	{
-		Muzzle_Temp = CreateDefaultSubobject<UArrowComponent>(TEXT("Muzzle"));
-		Muzzle_Temp->SetupAttachment(GetMesh());
-		Muzzle_Temp->SetRelativeLocation(FVector(0.f, 0.f, 148.f));
-		Muzzle_Temp->SetRelativeRotation(FRotator(0.f, 0.f, 90.f));
-	}
 }
 
 void AVremCharacter::BeginPlay()
@@ -282,69 +266,24 @@ void AVremCharacter::Attack_Temp(const FInputActionValue& Value)
 			TEXT("Attack"));
 	}
 	
-	UE_LOG(LogVremInput, Warning, TEXT("AVremCharacter::Attack_Temp NetRole : [%s]"), *GetNetRoleString(this));
-
-	const bool bShowDebug = CVarDebugCharacterShooting.GetValueOnGameThread() > 0;
-
 	if (bIsADS)
 	{
 		// range attack
-		
-		FVector WorldLocation;
-		FRotator WorldDirection;
-		GetController()->GetPlayerViewPoint(WorldLocation, WorldDirection);
-
-		FVector ViewpointLinetraceEnd = WorldLocation + WorldDirection.Vector() * 10000.f;
-
-		// linetrace from viewpoint
-		FHitResult ViewHit;
-		FCollisionQueryParams Params;
-		Params.AddIgnoredActor(this);
-
-		bool bHitFromViewpoint = GetWorld()->LineTraceSingleByChannel(
-			ViewHit,
-			WorldLocation,
-			ViewpointLinetraceEnd,
-			ECC_Visibility,
-			Params
-		);
-
-		FVector ViewportLinetraceEndPoint = bHitFromViewpoint ? ViewHit.Location : ViewpointLinetraceEnd;
-
-		if (bShowDebug)
-		{ 
-			DrawDebugLine(GetWorld(), WorldLocation, ViewportLinetraceEndPoint, bHitFromViewpoint ? FColor::Green : FColor::Red, false, 1.f, 0, 1.f);
-		}
-
-		// linetrace from muzzle
-		FHitResult MuzzleHit;
-		FVector MuzzleLocation = Muzzle_Temp->GetComponentLocation();
-		FVector ShootDirection = (ViewportLinetraceEndPoint - MuzzleLocation).GetSafeNormal();
-		FVector MuzzleEnd = MuzzleLocation + ShootDirection * 10000.f;
-
-		bool bHitFromMuzzle = GetWorld()->LineTraceSingleByChannel(
-			MuzzleHit,
-			MuzzleLocation,
-			MuzzleEnd,
-			ECC_Visibility,
-			Params
-		);
-
-		if (bHitFromMuzzle)
+		AVremEquipmentActor* WeaponActor = EquipmentComponent->GetCurrentEquipmentActor();
+		if (IsValid(WeaponActor) == false)
 		{
-			if (bShowDebug)
-			{ 
-				DrawDebugLine(GetWorld(), MuzzleLocation, MuzzleHit.Location, FColor::Green, false, 1.f, 0, 1.f);
-				DrawDebugPoint(GetWorld(), MuzzleHit.Location, 10.f, FColor::Red, false, 1.f);
-			}
+			UE_LOG(LogVremWeapon, Warning, TEXT("AVremCharacter::Attack_Temp WeaponActor not valid"));
+			return;
 		}
-		else
+
+		UVremWeaponComponent* WeaponComp = WeaponActor->FindComponentByClass<UVremWeaponComponent>();
+		if (IsValid(WeaponComp) == false)
 		{
-			if (bShowDebug)
-			{ 
-				DrawDebugLine(GetWorld(), MuzzleLocation, MuzzleEnd, FColor::Red, false, 1.f, 0, 1.f);
-			}
+			UE_LOG(LogVremWeapon, Warning, TEXT("AVremCharacter::Attack_Temp WeaponComp not valid"));
+			return;
 		}
+
+		WeaponComp->Fire();
 	}
 	else
 	{

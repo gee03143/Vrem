@@ -85,12 +85,6 @@ protected:
 	TObjectPtr<UVremEquipmentComponent> EquipmentComponent;
 #pragma endregion weaponsystem
 
-#pragma region temp
-protected:
-	UPROPERTY(EditAnywhere, BlueprintReadOnly)
-	TObjectPtr<UArrowComponent> Muzzle_Temp;
-#pragma endregion
-
 private:
 	FDelegateHandle GameModeDefinitionLoadedHandle;
 	

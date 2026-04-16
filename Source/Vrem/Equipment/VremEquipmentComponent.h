@@ -53,13 +53,16 @@ struct FEquipmentList : public FFastArraySerializer
 
 	FEquipmentEntry* GetEntryFromIndex(const int32 InIndex)
 	{
-		FEquipmentEntry* FoundEntry = Entries.FindByPredicate(
+		return const_cast<FEquipmentEntry*>(static_cast<const FEquipmentList*>(this)->GetEntryFromIndex(InIndex));
+	}
+
+	const FEquipmentEntry* GetEntryFromIndex(const int32 InIndex) const
+	{
+		return Entries.FindByPredicate(
 			[InIndex](const FEquipmentEntry& Other)
 			{
 				return InIndex == Other.EquipmentIndex;
 			});
-
-		return FoundEntry;
 	}
 
 	int32 FindIndexByDefinition(const UVremEquipmentDefinition* InDefinition)
@@ -140,6 +143,7 @@ public:
 	void SetCurrentWeapon(int32 InWeaponSlotIndex);
 	int32 GetEquipmentItemNum() const { return EquipmentList.GetNumEntries(); }
 	FString GetEquipmentListString() const { return EquipmentList.ToString(); }
+	AVremEquipmentActor* GetCurrentEquipmentActor() const;
 
 	void TryEquipItem(const UVremEquipmentDefinition* ItemToEquip, int32 InSlotIndex);
 	void TryUnequipItem(int32 InSlotIndex);

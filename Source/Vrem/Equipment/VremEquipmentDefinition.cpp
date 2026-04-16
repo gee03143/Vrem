@@ -119,8 +119,11 @@ void UVremEquipmentInstance::SpawnEquipmentActor()
 		return;
 	}
 
+	FActorSpawnParameters SpawnParams;
+	SpawnParams.Owner = ParentActor.Get();
+
 	// spawn
-	AVremEquipmentActor* SpawnedActor = World->SpawnActor<AVremEquipmentActor>(ActorClass, FTransform::Identity);
+	AVremEquipmentActor* SpawnedActor = World->SpawnActor<AVremEquipmentActor>(ActorClass, FTransform::Identity, SpawnParams);
 	if (IsValid(SpawnedActor) == false)
 	{
 		UE_LOG(LogVremEquipment, Warning, TEXT("UVremEquipmentInstance::AttachToSocket: SpawnedActor is invalid"));

@@ -9,3 +9,4 @@ DEFINE_LOG_CATEGORY(LogVremInput);
 DEFINE_LOG_CATEGORY(LogVremAssetManager);
 DEFINE_LOG_CATEGORY(LogVremInventory);
 DEFINE_LOG_CATEGORY(LogVremEquipment);
+DEFINE_LOG_CATEGORY(LogVremWeapon);
