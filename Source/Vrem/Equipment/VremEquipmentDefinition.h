@@ -16,6 +16,7 @@ enum class EEquipmentState : uint8
 {
 	Equipped,
 	Holstered,
+	NUM_EQUIPMENTSTATE
 };
 
 UCLASS()

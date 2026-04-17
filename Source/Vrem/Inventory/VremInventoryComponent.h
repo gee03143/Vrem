@@ -56,6 +56,7 @@ struct FInventoryList : public FFastArraySerializer
 
 	void AddEntry(const FPrimaryAssetId& ItemToAdd);
 	void RemoveEntry(const FPrimaryAssetId& ItemToRemove);
+	int32 GetNumEntries() const { return Entries.Num(); }
 
 	FString ToString() const
 	{
@@ -87,6 +88,11 @@ private:
 
 	UVremInventoryComponent* OwnerComponent = nullptr;
 	TArray<FPrimaryAssetId> PendingIdsForCreateInstance;
+
+#if WITH_AUTOMATION_WORKER
+public:
+	void TestAddEntry(UVremItemDefinition* ItemDef, int32 Count);
+#endif
 };
 
 template<>
@@ -115,6 +121,7 @@ public:
 	void AddItemToInventory(const UVremItemDefinition* ItemToAdd);
 	void RemoveItemFromInventory(const UVremItemDefinition* ItemToRemove);
 	FString GetInventoryItemsString() const { return InventoryItems.ToString(); }
+	int32 GetInventoryItemNum() const { return InventoryItems.GetNumEntries(); }
 
 	UFUNCTION(Server, Reliable)
 	void ServerAddItemToInventory(const UVremItemDefinition* ItemToAdd);
@@ -143,4 +150,11 @@ protected:
 private:
 	UPROPERTY(ReplicatedUsing = OnRep_InventoryItems)
 	FInventoryList InventoryItems;
+
+#if WITH_AUTOMATION_WORKER
+public:
+	void TestAddItem(UVremItemDefinition* ItemDef, int32 Count = 1);
+	void TestRemoveItem(const FPrimaryAssetId& ItemId);
+	void SimulateReplicateFrom(const UVremInventoryComponent* Source);
+#endif
 };

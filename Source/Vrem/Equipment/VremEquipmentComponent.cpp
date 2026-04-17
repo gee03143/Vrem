@@ -359,3 +359,18 @@ void UVremEquipmentComponent::OnRep_EquipmentList()
 {
 	EquipmentList.SetOwner(this);
 }
+
+#if WITH_AUTOMATION_WORKER
+void UVremEquipmentComponent::SimulateReplicateFrom(const UVremEquipmentComponent* Source)
+{
+	EquipmentList = Source->EquipmentList;
+	OnRep_EquipmentList();
+}
+
+EEquipmentState UVremEquipmentComponent::GetEquipmentStateAtSlot(int32 InSlotIndex) const
+{
+	const FEquipmentEntry* Entry = EquipmentList.GetEntryFromIndex(InSlotIndex);
+	return Entry != nullptr ? Entry->EquipmentState : EEquipmentState::NUM_EQUIPMENTSTATE;
+}
+
+#endif

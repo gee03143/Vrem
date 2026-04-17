@@ -179,4 +179,11 @@ protected:
 private:
 	UPROPERTY(ReplicatedUsing = OnRep_EquipmentList)
 	FEquipmentList EquipmentList;
+
+#if WITH_AUTOMATION_WORKER
+public:
+	// 테스트에서 복제를 시뮬레이션하기 위한 헬퍼
+	void SimulateReplicateFrom(const UVremEquipmentComponent* Source);
+	EEquipmentState GetEquipmentStateAtSlot(int32 InSlotIndex) const;
+#endif
 };

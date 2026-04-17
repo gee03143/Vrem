@@ -155,6 +155,20 @@ void FInventoryList::CreateInstanceForEntry(FInventoryEntry& Entry)
 	}
 }
 
+#if WITH_AUTOMATION_WORKER
+void FInventoryList::TestAddEntry(UVremItemDefinition* ItemDef, int32 Count)
+{
+	FInventoryEntry& NewEntry = Entries.Emplace_GetRef();
+	NewEntry.ItemId = ItemDef->GetPrimaryAssetId();
+	NewEntry.Count = Count;
+	NewEntry.ItemInstance = NewObject<UVremItemInstance>(OwnerComponent);
+	NewEntry.ItemInstance->OnItemCreated(ItemDef);
+
+	OwnerComponent->OnItemInstanceCreated.Broadcast(NewEntry.ItemInstance);
+	MarkItemDirty(NewEntry);
+}
+#endif
+
 // =======================================
 // UVremInventoryComponent
 // =======================================
@@ -224,3 +238,38 @@ void UVremInventoryComponent::OnRep_InventoryItems()
 
 	OnInventoryChanged.Broadcast();
 }
+
+#if WITH_AUTOMATION_WORKER
+void UVremInventoryComponent::TestAddItem(UVremItemDefinition* ItemDef, int32 Count)
+{
+	if (ItemDef == nullptr)
+	{
+		return;
+	}
+
+	FInventoryEntry* FoundEntry = InventoryItems.GetEntryFromId(ItemDef->GetPrimaryAssetId());
+	if (FoundEntry)
+	{
+		FoundEntry->Count += Count;
+	}
+	else
+	{
+		InventoryItems.TestAddEntry(ItemDef, Count);
+	}
+
+	OnInventoryChanged.Broadcast();
+}
+
+void UVremInventoryComponent::TestRemoveItem(const FPrimaryAssetId& ItemId)
+{
+	InventoryItems.RemoveEntry(ItemId);
+	OnInventoryChanged.Broadcast();
+}
+
+void UVremInventoryComponent::SimulateReplicateFrom(const UVremInventoryComponent* Source)
+{
+	InventoryItems = Source->InventoryItems;
+	OnRep_InventoryItems();
+}
+
+#endif // WITH_AUTOMATION_WORKER
