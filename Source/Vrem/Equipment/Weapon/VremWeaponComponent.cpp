@@ -3,6 +3,7 @@
 
 #include "VremWeaponComponent.h"
 #include "VremWeaponDefinition.h"
+#include "Engine/DamageEvents.h"
 #include "Vrem/VremLogChannels.h"
 
 static TAutoConsoleVariable<int32> CVarDebugCharacterShooting(
@@ -78,7 +79,7 @@ void UVremWeaponComponent::PerformHitScan(const FVector& ViewOrigin, const FVect
         ViewHit,
         ViewOrigin,
         ViewTraceEnd,
-        ECC_Visibility,
+        ECC_Pawn,
         QueryParams
     );
 
@@ -98,20 +99,28 @@ void UVremWeaponComponent::PerformHitScan(const FVector& ViewOrigin, const FVect
         MuzzleHit,
         MuzzleLocation,
         MuzzleTraceEnd,
-        ECC_Visibility,
+        ECC_Pawn,
         QueryParams
     );
 
     if (bMuzzleHit)
     {
-        UE_LOG(LogVremWeapon, Warning, TEXT("WeaponComponent::PerformHitScan Hit: %s"), *MuzzleHit.GetActor()->GetName());
         if (bShowDebug)
         {
+            DrawDebugPoint(GetWorld(), MuzzleLocation, 10.f, FColor::Black, false, 1.f);
             DrawDebugLine(GetWorld(), MuzzleLocation, MuzzleHit.Location, FColor::Green, false, 1.f, 0, 1.f);
             DrawDebugPoint(GetWorld(), MuzzleHit.Location, 10.f, FColor::Red, false, 1.f);
         }
-
-        // TODO [mingicho][2026/04/16]: 데미지 적용
+        
+        AActor* HitActor = Cast<AActor>(MuzzleHit.GetActor());
+        if (IsValid(HitActor))
+        {
+            FPointDamageEvent DamageEvent;
+            DamageEvent.HitInfo = MuzzleHit;
+            DamageEvent.ShotDirection = ShootDirection;
+            
+            HitActor->TakeDamage(10.f, DamageEvent, GetInstigatorController(), GetOwner());
+        }
     }
     else
     {

@@ -191,13 +191,13 @@ void FEquipmentList::CreateInstanceForEntry(FEquipmentEntry& Entry, const TCHAR*
 
 	if (bHasAuthority)
 	{
-		// ¼­¹ö: ¾×ÅÍ ½ºÆù ¡æ Entry¿¡ ÀúÀå ¡æ »óÅÂ Àû¿ë
+		// ï¿½ï¿½ï¿½ï¿½: ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ Entryï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½
 		Entry.EquipmentInstance->SpawnEquipmentActor();
 		Entry.EquipmentActor = Entry.EquipmentInstance->GetEquipmentActor();
 	}
 	else
 	{
-		// Å¬¶óÀÌ¾ðÆ®: º¹Á¦µÈ ¾×ÅÍ ¹ÙÀÎµù
+		// Å¬ï¿½ï¿½ï¿½Ì¾ï¿½Æ®: ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½Îµï¿½
 		if (Entry.EquipmentActor.IsValid())
 		{
 			Entry.EquipmentInstance->BindEquipmentActor(Entry.EquipmentActor.Get());
@@ -244,6 +244,7 @@ UVremEquipmentComponent::UVremEquipmentComponent()
 void UVremEquipmentComponent::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
 {
 	DOREPLIFETIME(UVremEquipmentComponent, EquipmentList);
+	DOREPLIFETIME(UVremEquipmentComponent, CurrentWeaponSlotIndex);
 }
 
 void UVremEquipmentComponent::InitializeFromOwner()
@@ -278,6 +279,7 @@ AVremEquipmentActor* UVremEquipmentComponent::GetCurrentEquipmentActor() const
 	const FEquipmentEntry* Entry = EquipmentList.GetEntryFromIndex(CurrentWeaponSlotIndex);
 	if (Entry == nullptr)
 	{
+		UE_LOG(LogVremEquipment, Warning, TEXT("GetCurrentEquipmentActor: CurrentWeaponEntry is nullptr"));
 		return nullptr;
 	}
 

@@ -6,6 +6,7 @@
 #include "GameFramework/Character.h"
 #include "VremCharacter.generated.h"
 
+class UHealthComponent;
 class UVremGameModeDefinition;
 class USpringArmComponent;
 class UCameraComponent;
@@ -51,7 +52,7 @@ protected:
 protected:
 	TSoftObjectPtr<UVremInputConfig> CurrentInputConfig;		// 임시... 나중에 Character 정보를 완전히 데이터로 분리하자
 #pragma endregion
-
+	
 #pragma region camera
 protected:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly)
@@ -85,6 +86,8 @@ protected:
 	TObjectPtr<UVremEquipmentComponent> EquipmentComponent;
 #pragma endregion weaponsystem
 
+	UPROPERTY(EditAnywhere, BlueprintReadOnly)
+	TObjectPtr<UHealthComponent> HealthComponent;
 private:
 	FDelegateHandle GameModeDefinitionLoadedHandle;
 	

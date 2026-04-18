@@ -5,8 +5,10 @@
 
 #include "InputAction.h"
 #include "EnhancedInputComponent.h"
+#include "HealthComponent.h"
 #include "VremPawnData.h"
 #include "Camera/CameraComponent.h"
+#include "Components/CapsuleComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "GameFramework/GameStateBase.h"
 #include "GameFramework/SpringArmComponent.h"
@@ -25,6 +27,7 @@
 #include "Vrem/Equipment/Weapon/VremWeaponComponent.h"
 #include "Vrem/Animation/VremAnimInstance.h"
 #include "Vrem/VremAssetManager.h"
+#include "Components/CapsuleComponent.h"
 
 static TAutoConsoleVariable<int32> CVarDebugCharacterInput(
 	TEXT("vrem.DebugCharacterInput"),
@@ -59,6 +62,8 @@ AVremCharacter::AVremCharacter()
 	InventoryComponent = CreateDefaultSubobject<UVremInventoryComponent>(TEXT("InventoryComponent"));
 
 	EquipmentComponent = CreateDefaultSubobject<UVremEquipmentComponent>(TEXT("EquipmentComponent"));
+
+	HealthComponent = CreateDefaultSubobject<UHealthComponent>(TEXT("HealthComponent"));
 }
 
 void AVremCharacter::BeginPlay()
@@ -98,6 +103,18 @@ void AVremCharacter::BeginPlay()
 		EquipmentComponent->RegisterComponentWithWorld(GetWorld());
 		InventoryComponent->InitializeFromOwner();
 	}
+	
+	if (IsValid(HealthComponent))
+	{
+		EquipmentComponent->RegisterComponentWithWorld(GetWorld());
+		HealthComponent->InitializeFromOwner();
+	}
+	
+	UE_LOG(LogTemp, Warning, TEXT(
+		"Capsule Collision: Enabled=%d, Visibility=%d"),
+		(int32)GetCapsuleComponent()->GetCollisionEnabled(),
+		(int32)GetCapsuleComponent()->GetCollisionResponseToChannel(ECC_Visibility)
+	);
 }
 
 void AVremCharacter::EndPlay(const EEndPlayReason::Type EndPlayReason)

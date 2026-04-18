@@ -23,7 +23,7 @@ struct FEquipmentEntry : public FFastArraySerializerItem
 	UPROPERTY()
 	EEquipmentState EquipmentState = EEquipmentState::Holstered;
 
-	UPROPERTY()  // »õ·Î Ãß°¡ - º¹Á¦µÊ
+	UPROPERTY()  // ï¿½ï¿½ï¿½ï¿½ ï¿½ß°ï¿½ - ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 	TWeakObjectPtr<AVremEquipmentActor> EquipmentActor;
 
 	UPROPERTY(NotReplicated, Transient)
@@ -173,7 +173,7 @@ protected:
 	void OnRep_EquipmentList();
 
 protected:
-	UPROPERTY(EditDefaultsOnly)
+	UPROPERTY(EditDefaultsOnly, Replicated)
 	int32 CurrentWeaponSlotIndex = INDEX_NONE;
 
 private:
@@ -182,7 +182,7 @@ private:
 
 #if WITH_AUTOMATION_WORKER
 public:
-	// Å×½ºÆ®¿¡¼­ º¹Á¦¸¦ ½Ã¹Ä·¹ÀÌ¼ÇÇÏ±â À§ÇÑ ÇïÆÛ
+	// ï¿½×½ï¿½Æ®ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½Ã¹Ä·ï¿½ï¿½Ì¼ï¿½ï¿½Ï±ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½
 	void SimulateReplicateFrom(const UVremEquipmentComponent* Source);
 	EEquipmentState GetEquipmentStateAtSlot(int32 InSlotIndex) const;
 #endif
