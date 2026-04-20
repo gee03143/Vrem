@@ -4,9 +4,28 @@
 
 #include "CoreMinimal.h"
 #include "Components/ActorComponent.h"
+#include "PhysicalMaterials/PhysicalMaterial.h"
 #include "VremWeaponComponent.generated.h"
 
 class UVremWeaponDefinition;
+
+USTRUCT()
+struct FWeaponFireResult
+{
+    GENERATED_BODY()
+
+    UPROPERTY()
+    FVector_NetQuantize HitLocation = FVector::ZeroVector;
+
+    UPROPERTY()
+    FVector_NetQuantize HitNormal = FVector::ZeroVector;
+
+    UPROPERTY()
+    bool bHit = false;
+
+    UPROPERTY()
+    TEnumAsByte<EPhysicalSurface> SurfaceType = SurfaceType_Default;
+};
 
 UCLASS( ClassGroup=(Custom), meta=(BlueprintSpawnableComponent) )
 class VREM_API UVremWeaponComponent : public UActorComponent
@@ -28,18 +47,23 @@ protected:
     void ServerFire(FVector ViewOrigin, FVector ViewDirection);
 
     UFUNCTION(NetMulticast, Unreliable)
-    void MulticastOnFire();
+    void MulticastOnFire(const FWeaponFireResult& FireResult);
 
-    void PerformHitScan(const FVector& ViewOrigin, const FVector& ViewDirection);
+    FWeaponFireResult PerformHitScan(const FVector& ViewOrigin, const FVector& ViewDirection);
 
     bool CanFire() const;
     void StartFireCooldown();
     void OnFireCooldownFinished();
 
     AController* GetInstigatorController() const;
+    AActor* GetWeaponOwner() const;
 
 protected:
+    // client only, 애니메이션이 반영된 총기 머즐 소켓 위치
     FVector GetMuzzleLocation() const;
+
+    // server only, 애니메이션이 반영되지 않은 논리적 사격 판정 시작점
+    FVector GetLogicalMuzzleLocation() const;
 
     UPROPERTY(EditDefaultsOnly)
     FName MuzzleSocketName = TEXT("Muzzle");

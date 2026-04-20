@@ -8,7 +8,18 @@ public class Vrem : ModuleRules
 	{
 		PCHUsage = PCHUsageMode.UseExplicitOrSharedPCHs;
 	
-		PublicDependencyModuleNames.AddRange(new string[] { "Core", "CoreUObject", "Engine", "InputCore", "EnhancedInput", "GameplayTags", "NetCore", "Networking" });
+		PublicDependencyModuleNames.AddRange(new string[] { 
+			"Core", 
+			"CoreUObject", 
+			"Engine", 
+			"InputCore", 
+			"EnhancedInput", 
+			"GameplayTags", 
+			"NetCore", 
+			"Networking",
+			"Niagara",
+            "PhysicsCore"
+        });
 
 		PrivateDependencyModuleNames.AddRange(new string[] {  });
 

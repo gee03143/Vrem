@@ -6,6 +6,8 @@
 #include "Engine/DataAsset.h"
 #include "VremWeaponDefinition.generated.h"
 
+class UNiagaraSystem;
+
 UENUM()
 enum class EWeaponFireMode : uint8
 {
@@ -30,6 +32,18 @@ public:
 
     UPROPERTY(EditDefaultsOnly, Category = "Damage")
     float BaseDamage = 20.f;
+
+    UPROPERTY(EditDefaultsOnly, Category = "Effects")
+	TObjectPtr<USoundBase> FireSound;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Effects")
+	TObjectPtr<UNiagaraSystem> MuzzleFlashEffect;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Effects")
+	TObjectPtr<UNiagaraSystem> BulletTrailEffect;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Effects")
+	TMap<TEnumAsByte<EPhysicalSurface>, TObjectPtr<UNiagaraSystem>> ImpactEffects;
 
     // 발사 간격 (초) 계산
     float GetFireInterval() const { return 60.f / FireRate; }

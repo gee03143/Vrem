@@ -5,6 +5,10 @@
 #include "VremWeaponDefinition.h"
 #include "Engine/DamageEvents.h"
 #include "Vrem/VremLogChannels.h"
+#include "Kismet/GameplayStatics.h"
+#include "NiagaraSystem.h"
+#include "NiagaraFunctionLibrary.h"
+#include "NiagaraComponent.h"
 
 static TAutoConsoleVariable<int32> CVarDebugCharacterShooting(
     TEXT("vrem.DebugCharacterShooting"),
@@ -14,6 +18,13 @@ static TAutoConsoleVariable<int32> CVarDebugCharacterShooting(
     TEXT("1: On"),
     ECVF_Cheat);
 
+static TAutoConsoleVariable<float> CVarLogicalMuzzleX(
+    TEXT("vrem.Weapon.LogicalMuzzleX"), 40.f, TEXT("Logical muzzle X offset"));
+static TAutoConsoleVariable<float> CVarLogicalMuzzleY(
+    TEXT("vrem.Weapon.LogicalMuzzleY"), 0.f, TEXT("Logical muzzle Y offset"));
+static TAutoConsoleVariable<float> CVarLogicalMuzzleZ(
+    TEXT("vrem.Weapon.LogicalMuzzleZ"), 40.f, TEXT("Logical muzzle Z offset"));
+
 // Sets default values for this component's properties
 UVremWeaponComponent::UVremWeaponComponent()
 {
@@ -22,13 +33,17 @@ UVremWeaponComponent::UVremWeaponComponent()
 
 void UVremWeaponComponent::Fire()
 {
-    if (IsValid(WeaponDefinition) == false || CanFire() == false)
+    if (IsValid(WeaponDefinition) == false)
     {
         return;
     }
 
     bWantsToFire = true;
-    ExecuteFire();
+
+    if (CanFire())
+    {
+        ExecuteFire();
+    }
     return;
 }
 
@@ -56,17 +71,71 @@ void UVremWeaponComponent::ExecuteFire()
 
 void UVremWeaponComponent::ServerFire_Implementation(FVector ViewOrigin, FVector ViewDirection)
 {
-    PerformHitScan(ViewOrigin, ViewDirection);
-    MulticastOnFire();
+    const FWeaponFireResult& FireResult = PerformHitScan(ViewOrigin, ViewDirection);
+    MulticastOnFire(FireResult);
 }
 
-void UVremWeaponComponent::MulticastOnFire_Implementation()
+void UVremWeaponComponent::MulticastOnFire_Implementation(const FWeaponFireResult& FireResult)
 {
-    //sound, muzzle flash, effects
+    if (GetNetMode() == NM_DedicatedServer)
+    {
+        return;
+    }
+
+    const FVector MuzzleLocation = GetMuzzleLocation();  // 애니메이션 반영된 실제 머즐
+
+    // 1. 발사 사운드
+    if (IsValid(WeaponDefinition->FireSound))
+    {
+        UGameplayStatics::PlaySoundAtLocation(this, WeaponDefinition->FireSound, MuzzleLocation);
+    }
+
+    // 2. 머즐 플래시
+    if (WeaponDefinition->MuzzleFlashEffect)
+    {
+        UNiagaraComponent* MuzzleFlash = UNiagaraFunctionLibrary::SpawnSystemAtLocation(
+            this, WeaponDefinition->MuzzleFlashEffect, MuzzleLocation, FRotator::ZeroRotator, FVector(1.f), true, false);
+        if (MuzzleFlash)
+        {
+            static const FName MuzzleFlashScaleName = FName(TEXT("Global Scale"));
+            MuzzleFlash->SetVariableFloat(MuzzleFlashScaleName, 0.25f);
+            MuzzleFlash->Activate();
+        }
+    }
+
+    // 3. 트레일 (히트 여부와 상관없이 탄도를 따라)
+    if (WeaponDefinition->BulletTrailEffect)
+    {
+        const FVector TrailDirection = (FireResult.HitLocation - MuzzleLocation).GetSafeNormal();
+        const FRotator TrailRotation = TrailDirection.Rotation();
+
+        UNiagaraComponent* Trail = UNiagaraFunctionLibrary::SpawnSystemAtLocation(
+            this, WeaponDefinition->BulletTrailEffect, MuzzleLocation, TrailRotation);
+        if (Trail)
+        {
+            static const FName TrailStartVariableName = FName(TEXT("Start"));
+            static const FName TrailTargetVariableName = FName(TEXT("Target"));
+
+            Trail->SetVariableVec3(TrailStartVariableName, MuzzleLocation);
+            Trail->SetVariableVec3(TrailTargetVariableName, FireResult.HitLocation);
+        }
+    }
+
+    // 4. 피격 이펙트
+    if (FireResult.bHit)
+    {
+        if (UNiagaraSystem* ImpactFx = WeaponDefinition->ImpactEffects.FindRef(FireResult.SurfaceType))
+        {
+            UNiagaraFunctionLibrary::SpawnSystemAtLocation(
+                this, ImpactFx, FireResult.HitLocation, FireResult.HitNormal.Rotation());
+        }
+    }
 }
 
-void UVremWeaponComponent::PerformHitScan(const FVector& ViewOrigin, const FVector& ViewDirection)
+FWeaponFireResult UVremWeaponComponent::PerformHitScan(const FVector& ViewOrigin, const FVector& ViewDirection)
 {
+    FWeaponFireResult Result;
+
     FVector ViewTraceEnd = ViewOrigin + ViewDirection * WeaponDefinition->Range;
     const bool bShowDebug = CVarDebugCharacterShooting.GetValueOnGameThread() > 0;
 
@@ -79,7 +148,7 @@ void UVremWeaponComponent::PerformHitScan(const FVector& ViewOrigin, const FVect
         ViewHit,
         ViewOrigin,
         ViewTraceEnd,
-        ECC_Pawn,
+        ECC_Visibility,
         QueryParams
     );
 
@@ -90,7 +159,7 @@ void UVremWeaponComponent::PerformHitScan(const FVector& ViewOrigin, const FVect
 
     FVector TargetPoint = bViewHit ? ViewHit.Location : ViewTraceEnd;
 
-    FVector MuzzleLocation = GetMuzzleLocation();
+    FVector MuzzleLocation = GetLogicalMuzzleLocation();
     FVector ShootDirection = (TargetPoint - MuzzleLocation).GetSafeNormal();
     FVector MuzzleTraceEnd = MuzzleLocation + ShootDirection * WeaponDefinition->Range;
 
@@ -99,7 +168,7 @@ void UVremWeaponComponent::PerformHitScan(const FVector& ViewOrigin, const FVect
         MuzzleHit,
         MuzzleLocation,
         MuzzleTraceEnd,
-        ECC_Pawn,
+        ECC_Visibility,
         QueryParams
     );
 
@@ -111,6 +180,11 @@ void UVremWeaponComponent::PerformHitScan(const FVector& ViewOrigin, const FVect
             DrawDebugLine(GetWorld(), MuzzleLocation, MuzzleHit.Location, FColor::Green, false, 1.f, 0, 1.f);
             DrawDebugPoint(GetWorld(), MuzzleHit.Location, 10.f, FColor::Red, false, 1.f);
         }
+
+        Result.bHit = true;
+        Result.HitLocation = MuzzleHit.Location;
+        Result.HitNormal = MuzzleHit.Normal;
+        Result.SurfaceType = UGameplayStatics::GetSurfaceType(MuzzleHit);
         
         AActor* HitActor = Cast<AActor>(MuzzleHit.GetActor());
         if (IsValid(HitActor))
@@ -128,7 +202,12 @@ void UVremWeaponComponent::PerformHitScan(const FVector& ViewOrigin, const FVect
         {
             DrawDebugLine(GetWorld(), MuzzleLocation, MuzzleTraceEnd, FColor::Red, false, 1.f, 0, 1.f);
         }
+
+        Result.bHit = false;
+        Result.HitLocation = MuzzleTraceEnd;
     }
+
+    return Result;
 }
 
 bool UVremWeaponComponent::CanFire() const
@@ -163,12 +242,19 @@ void UVremWeaponComponent::OnFireCooldownFinished()
 
 AController* UVremWeaponComponent::GetInstigatorController() const
 {
-    APawn* Pawn = Cast<APawn>(GetOwner()->GetOwner());
+    APawn* Pawn = Cast<APawn>(GetWeaponOwner());
     return Pawn ? Pawn->GetController() : nullptr;
+}
+
+AActor* UVremWeaponComponent::GetWeaponOwner() const
+{
+    return GetOwner() ? GetOwner()->GetOwner() : nullptr;
 }
 
 FVector UVremWeaponComponent::GetMuzzleLocation() const
 {
+    check(GetNetMode() != NM_DedicatedServer);
+
 	AActor* WeaponActor = GetOwner();
 	if (IsValid(WeaponActor) == false)
 	{
@@ -189,5 +275,20 @@ FVector UVremWeaponComponent::GetMuzzleLocation() const
 
     UE_LOG(LogVremWeapon, Warning, TEXT("WeaponComponent::GetMuzzleLocation fallback!"));
 	return GetOwner()->GetActorLocation();
+}
+
+FVector UVremWeaponComponent::GetLogicalMuzzleLocation() const
+{
+    check(GetOwner()->HasAuthority());
+
+    FVector ShootingOffset(
+        CVarLogicalMuzzleX.GetValueOnGameThread(),
+        CVarLogicalMuzzleY.GetValueOnGameThread(),
+        CVarLogicalMuzzleZ.GetValueOnGameThread()
+    );
+
+    AActor* WeaponOwner = GetWeaponOwner();
+
+    return IsValid(WeaponOwner) ? WeaponOwner->GetActorTransform().TransformPosition(ShootingOffset) : FVector::ZeroVector;
 }
 

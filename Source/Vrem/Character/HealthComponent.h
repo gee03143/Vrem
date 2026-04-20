@@ -25,9 +25,6 @@ public:
 
 protected:
 	UFUNCTION()
-	void OnTakeAnyDamageHandle(AActor* DamagedActor, float Damage, const class UDamageType* DamageType, class AController* InstigatedBy, AActor* DamageCauser);
-	
-	UFUNCTION()
 	void OnTakePointDamageHandle(AActor* DamagedActor, float Damage, class AController* InstigatedBy, FVector HitLocation, class UPrimitiveComponent* FHitComponent,
 		FName BoneName, FVector ShotFromDirection, const class UDamageType* DamageType, AActor* DamageCauser);
 
@@ -37,6 +34,8 @@ protected:
 	UFUNCTION()
 	void OnRep_BaseHealth(float PrevHealth);
 	
+	void BroadcastHealthChanged(float PrevHealth);
+
 public:
 	DECLARE_MULTICAST_DELEGATE_TwoParams(FOnHealthChanged, float /*PrevHealth*/, float /*NewHealth*/)
 	FOnHealthChanged OnHealthChanged;
@@ -46,5 +45,8 @@ public:
 	
 protected:
 	UPROPERTY(EditDefaultsOnly, ReplicatedUsing=OnRep_BaseHealth)
-	float Health;
+	float Health = 100.f;
+
+		UPROPERTY(EditDefaultsOnly, ReplicatedUsing=OnRep_BaseHealth)
+	float MaxHealth = 100.f;
 };
