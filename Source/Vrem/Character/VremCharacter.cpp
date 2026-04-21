@@ -308,6 +308,42 @@ void AVremCharacter::Attack_Temp(const FInputActionValue& Value)
 	}
 }
 
+void AVremCharacter::StopAttack_Temp(const FInputActionValue& Value)
+{
+	if (CVarDebugCharacterInput.GetValueOnGameThread() > 0)
+	{
+		GEngine->AddOnScreenDebugMessage(
+			VremDebugKey::DebugKey_InputWeaponPrimary,
+			1.f,
+			FColor::Yellow,
+			TEXT("StopAttack"));
+	}
+
+	if (bIsADS)
+	{
+		// range attack
+		AVremEquipmentActor* WeaponActor = EquipmentComponent->GetCurrentEquipmentActor();
+		if (IsValid(WeaponActor) == false)
+		{
+			UE_LOG(LogVremWeapon, Warning, TEXT("AVremCharacter::StopAttack_Temp WeaponActor not valid"));
+			return;
+		}
+
+		UVremWeaponComponent* WeaponComp = WeaponActor->FindComponentByClass<UVremWeaponComponent>();
+		if (IsValid(WeaponComp) == false)
+		{
+			UE_LOG(LogVremWeapon, Warning, TEXT("AVremCharacter::StopAttack_Temp WeaponComp not valid"));
+			return;
+		}
+
+		WeaponComp->StopFire();
+	}
+	else
+	{
+		// melee attack
+	}
+}
+
 void AVremCharacter::ToggleADS(const FInputActionValue& Value)
 {
 	bIsADS = !bIsADS;
@@ -360,7 +396,8 @@ void AVremCharacter::TryBindInputByInputConfig()
 		const UInputAction* AttackAction = CurrentInputConfig->FindInputActionByTag(FVremGameplayTags::Input_WeaponPrimary);
 		if (AttackAction != nullptr)
 		{
-			EIC->BindAction(AttackAction, ETriggerEvent::Triggered, this, &AVremCharacter::Attack_Temp);
+			EIC->BindAction(AttackAction, ETriggerEvent::Started, this, &AVremCharacter::Attack_Temp);
+			EIC->BindAction(AttackAction, ETriggerEvent::Completed, this, &AVremCharacter::StopAttack_Temp);
 		}
 
 		const UInputAction* ToggleADSAction = CurrentInputConfig->FindInputActionByTag(FVremGameplayTags::Input_ToggleADS);
