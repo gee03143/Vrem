@@ -2,7 +2,6 @@
 
 
 #include "VremWeaponComponent.h"
-#include "VremWeaponDefinition.h"
 #include "Engine/DamageEvents.h"
 #include "Vrem/VremLogChannels.h"
 #include "Kismet/GameplayStatics.h"
@@ -67,6 +66,11 @@ void UVremWeaponComponent::ExecuteFire()
 
 	ServerFire(ViewOrigin, ViewRotation.Vector());
 	StartFireCooldown();
+
+    if (IsValid(WeaponDefinition))
+    {
+        OnWeaponFired.Broadcast(WeaponDefinition->RecoilProfile);
+    }
 }
 
 void UVremWeaponComponent::ServerFire_Implementation(FVector ViewOrigin, FVector ViewDirection)

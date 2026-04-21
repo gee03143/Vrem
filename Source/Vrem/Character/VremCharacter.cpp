@@ -432,13 +432,24 @@ void AVremCharacter::OnEquipmentActorAttached(const TSubclassOf<UAnimInstance> I
 	}
 
 	UVremAnimInstance* AnimInstance = Cast<UVremAnimInstance>(GetMesh()->GetAnimInstance());
-	if (IsValid(AnimInstance) == false)
+	if (IsValid(AnimInstance))
 	{
-		UE_LOG(LogVremEquipment, Warning, TEXT("AVremCharacter::OnEquipmentActorAttached AnimInstance is nullptr"));
-		return;
+		AnimInstance->SetWeaponAnimLayer(InAnimLayerClass);
 	}
 
-	AnimInstance->SetWeaponAnimLayer(InAnimLayerClass);
+	if (IsValid(EquipmentComponent))
+	{
+		AVremEquipmentActor* EquipActor = EquipmentComponent->GetCurrentEquipmentActor();
+		if (IsValid(EquipActor))
+		{
+			UVremWeaponComponent* Weapon = EquipActor->FindComponentByClass<UVremWeaponComponent>();
+			if (IsValid(Weapon) && Weapon != CurrentWeapon.Get())
+			{
+				CurrentWeapon = Weapon;
+				CurrentWeapon->OnWeaponFired.AddUObject(this, &ThisClass::HandleWeaponFired);
+			}
+		}
+	}
 }
 
 void AVremCharacter::OnEquipmentActorDetached(const TSubclassOf<UAnimInstance> InAnimLayerClass)
@@ -460,5 +471,37 @@ void AVremCharacter::OnEquipmentActorDetached(const TSubclassOf<UAnimInstance> I
 	if (AnimInstance->GetCurrentLayer() == InAnimLayerClass)
 	{
 		AnimInstance->SetWeaponAnimLayer(nullptr);
+	}
+
+	if (CurrentWeapon.IsValid())
+	{
+		AVremEquipmentActor* CurrentEquipActor = EquipmentComponent->GetCurrentEquipmentActor();
+		UVremWeaponComponent* CurrentlyEquippedWeapon = nullptr;
+		if (IsValid(CurrentEquipActor))
+		{
+			CurrentlyEquippedWeapon = CurrentEquipActor->FindComponentByClass<UVremWeaponComponent>();
+		}
+
+		// 현재 장착된 무기가 캐시된 CurrentWeapon과 다르면 해제
+		if (CurrentlyEquippedWeapon != CurrentWeapon.Get())
+		{
+			CurrentWeapon->OnWeaponFired.RemoveAll(this);
+			CurrentWeapon = nullptr;
+		}
+	}
+}
+
+void AVremCharacter::HandleWeaponFired(const FRecoilProfile& RecoilProfile)
+{
+	const float VerticalPitch = -RecoilProfile.VerticalKick
+		+ FMath::RandRange(-RecoilProfile.VerticalVariance, RecoilProfile.VerticalVariance);
+	AddControllerPitchInput(VerticalPitch);
+
+	const float HorizontalYaw = FMath::RandRange(-RecoilProfile.HorizontalKick, RecoilProfile.HorizontalKick);
+	AddControllerYawInput(HorizontalYaw);
+
+	if (IsValid(CameraSystem))
+	{
+		CameraSystem->AddTransientFOVKick(RecoilProfile.FOVKick, RecoilProfile.FOVRecoverSpeed);
 	}
 }

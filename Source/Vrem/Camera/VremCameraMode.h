@@ -9,9 +9,9 @@
 
 struct FVremCameraState
 {
-	float TargetFOV;
-	float TargetArmLength;
-	FVector TargetSocketOffset;
+	float TargetFOV = 90.f;
+	float TargetArmLength = 300.f;
+	FVector TargetSocketOffset = FVector::ZeroVector;
 };
 
 UCLASS()

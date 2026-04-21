@@ -15,8 +15,10 @@ class UVremCameraSystem;
 class UVremCameraMode;
 class UVremInventoryComponent;
 class UVremEquipmentComponent;
+class UVremWeaponComponent;
 struct FInputActionValue;
 class UVremEquipmentDefinition;
+struct FRecoilProfile;
 
 UCLASS()
 class VREM_API AVremCharacter : public ACharacter
@@ -78,12 +80,15 @@ protected:
 	void OnEquipmentActorAttached(const TSubclassOf<UAnimInstance> InAnimLayerClass);
 	void OnEquipmentActorDetached(const TSubclassOf<UAnimInstance> InAnimLayerClass);
 
+	void HandleWeaponFired(const FRecoilProfile& RecoilProfile);
 protected:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly)
 	TObjectPtr<UVremInventoryComponent> InventoryComponent;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly)
 	TObjectPtr<UVremEquipmentComponent> EquipmentComponent;
+
+	TWeakObjectPtr<UVremWeaponComponent> CurrentWeapon;
 #pragma endregion weaponsystem
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly)

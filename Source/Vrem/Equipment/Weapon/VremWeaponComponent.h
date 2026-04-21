@@ -5,6 +5,7 @@
 #include "CoreMinimal.h"
 #include "Components/ActorComponent.h"
 #include "PhysicalMaterials/PhysicalMaterial.h"
+#include "VremWeaponDefinition.h"
 #include "VremWeaponComponent.generated.h"
 
 class UVremWeaponDefinition;
@@ -57,6 +58,10 @@ protected:
 
     AController* GetInstigatorController() const;
     AActor* GetWeaponOwner() const;
+
+public:
+    DECLARE_MULTICAST_DELEGATE_OneParam(FOnWeaponFired, const FRecoilProfile& /*RecoilProfile*/)
+    FOnWeaponFired OnWeaponFired;
 
 protected:
     // client only, 애니메이션이 반영된 총기 머즐 소켓 위치
