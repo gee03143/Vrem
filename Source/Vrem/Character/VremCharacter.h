@@ -4,6 +4,8 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Character.h"
+#include "GameplayTagAssetInterface.h"
+#include "GameplayTagContainer.h"
 #include "VremCharacter.generated.h"
 
 class UHealthComponent;
@@ -20,8 +22,10 @@ struct FInputActionValue;
 class UVremEquipmentDefinition;
 struct FRecoilProfile;
 
+// TODO: 컴포넌트 구성은 추후 BP에서 관리하는 방향으로 리팩터링 예정.
+// 현재는 개발 편의를 위해 C++에서 모든 컴포넌트를 기본 생성.
 UCLASS()
-class VREM_API AVremCharacter : public ACharacter
+class VREM_API AVremCharacter : public ACharacter, public IGameplayTagAssetInterface
 {
 	GENERATED_BODY()
 
@@ -75,6 +79,9 @@ protected:
 #pragma endregion
 
 #pragma region weaponsystem
+public:
+	float GetCurrentSpreadForUI() const;
+
 protected:
 	void OnItemInstanceCreated(class UVremItemInstance* ItemInstance);
 	void OnItemInstanceRemoved(const FPrimaryAssetId& ItemId);
@@ -96,6 +103,39 @@ protected:
 	TObjectPtr<UHealthComponent> HealthComponent;
 private:
 	FDelegateHandle GameModeDefinitionLoadedHandle;
-	
-	bool bIsADS = false;		// 임시... 추후 GameplayTag로 상태 관리할 것
+
+#pragma region gameplaytag
+public:
+	// IGameplayTagAssetInterface
+	virtual void GetOwnedGameplayTags(FGameplayTagContainer& TagContainer) const override
+	{
+		TagContainer.Reset();
+		TagContainer.AppendTags(StateTags);
+	}
+
+	bool HasStateTag(const FGameplayTag& Tag) const
+	{
+		return StateTags.HasTag(Tag);
+	}
+
+private:
+	void UpdateMovementStateTags();
+
+	// 상태 변경은 내부나 테스트 클래스에서만
+
+	void AddStateTag(const FGameplayTag& Tag)
+	{
+		StateTags.AddTag(Tag);
+	}
+
+	void RemoveStateTag(const FGameplayTag& Tag)
+	{
+		StateTags.RemoveTag(Tag);
+	}
+
+private:
+	FGameplayTagContainer StateTags;
+#pragma endregion gameplaytag
+
 };
+

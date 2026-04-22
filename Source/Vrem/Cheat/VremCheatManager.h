@@ -48,8 +48,15 @@ private:
 	void EquipItem_Command(const TArray<FString>& Args);
 	void UnequipItem_Command(const TArray<FString>& Args);
 	void PrintEquipmentList_Command(const TArray<FString>& Args);
-
 #pragma endregion EquipmentSystem
+
+#pragma region gameplaytag
+public:
+	void PrintCharacterStates();
+
+private:
+	void PrintStateTags_Command(const TArray<FString>& Args);
+#pragma endregion gameplaytag
 
 private:
 	TArray<FString> RegisteredCommands;

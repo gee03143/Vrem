@@ -13,4 +13,10 @@ namespace FVremGameplayTags
 	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Input_Look);
 	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Input_WeaponPrimary);
 	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Input_ToggleADS);
+
+	// states
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(State_Aiming_ADS);
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(State_Aiming_Scoped);
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(State_Movement_Moving);
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(State_Movement_InAir);
 }

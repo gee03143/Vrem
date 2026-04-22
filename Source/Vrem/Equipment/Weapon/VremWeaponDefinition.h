@@ -41,6 +41,37 @@ struct FRecoilProfile
     float FOVRecoverSpeed = 8.0f;
 };
 
+USTRUCT(BlueprintType)
+struct FSpreadProfile
+{
+    GENERATED_BODY()
+
+    // 기본 스프레드 (도 단위, 한쪽 반각)
+    // 예: 1.0 → 최대 ±1도 범위로 랜덤
+    UPROPERTY(EditDefaultsOnly, Category = "Spread")
+    float BaseSpread = 1.0f;
+
+    // 이동 시 스프레드 배율
+    UPROPERTY(EditDefaultsOnly, Category = "Spread", meta = (ClampMin = "0.0"))
+    float MovingSpreadMultiplier = 2.0f;
+
+    // 공중 상태 스프레드 배율
+    UPROPERTY(EditDefaultsOnly, Category = "Spread", meta = (ClampMin = "0.0"))
+    float InAirSpreadMultiplier = 3.0f;
+
+    // 발사 시 누적되는 스프레드 (블룸)
+    UPROPERTY(EditDefaultsOnly, Category = "Spread|Bloom")
+    float BloomPerShot = 0.5f;
+
+    // 블룸 최대치 (누적 한계)
+    UPROPERTY(EditDefaultsOnly, Category = "Spread|Bloom")
+    float MaxBloom = 5.0f;
+
+    // 블룸 감소 속도 (초당 감소 도)
+    UPROPERTY(EditDefaultsOnly, Category = "Spread|Bloom")
+    float BloomRecoverSpeed = 3.0f;
+};
+
 UCLASS()
 class VREM_API UVremWeaponDefinition : public UDataAsset
 {
@@ -73,6 +104,9 @@ public:
 
     UPROPERTY(EditDefaultsOnly, Category = "Recoil")
     FRecoilProfile RecoilProfile;
+
+    UPROPERTY(EditDefaultsOnly, Category = "Spread")
+    FSpreadProfile SpreadProfile;
 
     // 발사 간격 (초) 계산
     float GetFireInterval() const { return 60.f / FireRate; }

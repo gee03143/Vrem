@@ -37,10 +37,14 @@ public:
 	// Sets default values for this component's properties
 	UVremWeaponComponent();
 
+protected:
+    virtual void TickComponent(float DeltaTime, enum ELevelTick TickType, FActorComponentTickFunction *ThisTickFunction) override;
+
 public:
     void Fire();
     void StopFire();
 
+    float GetCurrentSpread() const;
 protected:
     void ExecuteFire();
 
@@ -59,6 +63,7 @@ protected:
     AController* GetInstigatorController() const;
     AActor* GetWeaponOwner() const;
 
+    void AccumulateBloom();
 public:
     DECLARE_MULTICAST_DELEGATE_OneParam(FOnWeaponFired, const FRecoilProfile& /*RecoilProfile*/)
     FOnWeaponFired OnWeaponFired;
@@ -70,14 +75,17 @@ protected:
     // server only, 애니메이션이 반영되지 않은 논리적 사격 판정 시작점
     FVector GetLogicalMuzzleLocation() const;
 
+
+protected:
     UPROPERTY(EditDefaultsOnly)
     FName MuzzleSocketName = TEXT("Muzzle");
 
-protected:
 	UPROPERTY(EditDefaultsOnly)
 	TObjectPtr<UVremWeaponDefinition> WeaponDefinition;
 private:
     FTimerHandle FireCooldownTimer;
     bool bCanFire = true;
     bool bWantsToFire = false;
+
+    float CurrentBloom = 0.f;
 };

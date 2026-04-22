@@ -4,10 +4,12 @@
 #include "VremWeaponComponent.h"
 #include "Engine/DamageEvents.h"
 #include "Vrem/VremLogChannels.h"
+#include "Vrem/VremGameplayTags.h"
 #include "Kismet/GameplayStatics.h"
 #include "NiagaraSystem.h"
 #include "NiagaraFunctionLibrary.h"
 #include "NiagaraComponent.h"
+#include "GameplayTagAssetInterface.h"
 
 static TAutoConsoleVariable<int32> CVarDebugCharacterShooting(
     TEXT("vrem.DebugCharacterShooting"),
@@ -28,6 +30,22 @@ static TAutoConsoleVariable<float> CVarLogicalMuzzleZ(
 UVremWeaponComponent::UVremWeaponComponent()
 {
 	SetIsReplicatedByDefault(true);
+    PrimaryComponentTick.bCanEverTick = true;
+}
+
+void UVremWeaponComponent::TickComponent(float DeltaTime, enum ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction)
+{
+    Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
+
+    if (IsValid(WeaponDefinition) == false)
+    {
+        return;
+    }
+
+    if (CurrentBloom > 0.f)
+    {
+        CurrentBloom = FMath::Max(0.f, CurrentBloom - WeaponDefinition->SpreadProfile.BloomRecoverSpeed * DeltaTime);
+    }
 }
 
 void UVremWeaponComponent::Fire()
@@ -64,8 +82,17 @@ void UVremWeaponComponent::ExecuteFire()
 	FRotator ViewRotation;
 	PC->GetPlayerViewPoint(ViewOrigin, ViewRotation);
 
-	ServerFire(ViewOrigin, ViewRotation.Vector());
+    // 스프레드 적용
+    const float SpreadDegrees = GetCurrentSpread();
+    const FVector ShootDirection = FMath::VRandCone(
+        ViewRotation.Vector(),
+        FMath::DegreesToRadians(SpreadDegrees)
+    );
+
+	ServerFire(ViewOrigin, ShootDirection);
 	StartFireCooldown();
+
+    AccumulateBloom();
 
     if (IsValid(WeaponDefinition))
     {
@@ -253,6 +280,54 @@ AController* UVremWeaponComponent::GetInstigatorController() const
 AActor* UVremWeaponComponent::GetWeaponOwner() const
 {
     return GetOwner() ? GetOwner()->GetOwner() : nullptr;
+}
+
+float UVremWeaponComponent::GetCurrentSpread() const
+{
+    if (WeaponDefinition == nullptr)
+    {
+        return 0.f;
+    }
+
+    AActor* Owner = GetWeaponOwner();
+    IGameplayTagAssetInterface* TagInterface = Cast<IGameplayTagAssetInterface>(Owner);
+    if (TagInterface == nullptr)
+    {
+        return 0.f;
+    }
+
+    FGameplayTagContainer OwnerTags;
+    TagInterface->GetOwnedGameplayTags(OwnerTags);
+
+    if (OwnerTags.HasTag(FVremGameplayTags::State_Aiming_Scoped))
+    {
+        return 0.f;
+    }
+
+    const FSpreadProfile& Profile = WeaponDefinition->SpreadProfile;
+    float Spread = Profile.BaseSpread + CurrentBloom;
+    if (OwnerTags.HasTag(FVremGameplayTags::State_Movement_Moving))
+    {
+        Spread *= Profile.MovingSpreadMultiplier;
+    }
+
+    if (OwnerTags.HasTag(FVremGameplayTags::State_Movement_InAir))
+    {
+        Spread *= Profile.InAirSpreadMultiplier;
+    }
+
+    return Spread;
+}
+
+void UVremWeaponComponent::AccumulateBloom()
+{
+    if (IsValid(WeaponDefinition) == false)
+    {
+        return;
+    }
+
+    const FSpreadProfile& Profile = WeaponDefinition->SpreadProfile;
+    CurrentBloom = FMath::Min(Profile.MaxBloom, CurrentBloom + Profile.BloomPerShot);
 }
 
 FVector UVremWeaponComponent::GetMuzzleLocation() const

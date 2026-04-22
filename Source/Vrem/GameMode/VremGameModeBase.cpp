@@ -8,12 +8,14 @@
 #include "Vrem/VremLogChannels.h"
 #include "Vrem/Character/VremCharacter.h"
 #include "Vrem/Player/VremPlayerController.h"
+#include "Vrem/UI/VremHUD.h"
 
 AVremGameModeBase::AVremGameModeBase()
 {
 	GameStateClass = AVremGameStateBase::StaticClass();
 	DefaultPawnClass = AVremCharacter::StaticClass();
 	PlayerControllerClass = AVremPlayerController::StaticClass();
+	HUDClass = AVremHUD::StaticClass();
 }
 
 void AVremGameModeBase::BeginPlay()

@@ -8,6 +8,7 @@
 #include "Vrem/Inventory/VremItemDefinition.h"
 #include "Vrem/Equipment/VremEquipmentComponent.h"
 #include "Vrem/Equipment/VremEquipmentDefinition.h"
+#include "GameplayTagAssetInterface.h"
 
 #define REGISTER_CHEAT_CMD(Name, Help, Func) \
     ConsoleManager.RegisterConsoleCommand(TEXT(Name), TEXT(Help), \
@@ -29,6 +30,8 @@ void UVremCheatManager::InitCheatManager()
     REGISTER_CHEAT_CMD("Vrem.Equipment.Equip", "Equip item by slot index and asset name", EquipItem_Command);
     REGISTER_CHEAT_CMD("Vrem.Equipment.Unequip", "Unequip item by slot index", UnequipItem_Command);
     REGISTER_CHEAT_CMD("Vrem.Equipment.Print", "Print equipment list", PrintEquipmentList_Command);
+
+    REGISTER_CHEAT_CMD("Vrem.State.Print", "Print character state tags", PrintStateTags_Command);
 }
 
 void UVremCheatManager::BeginDestroy()
@@ -264,6 +267,25 @@ void UVremCheatManager::UnequipItem_Command(const TArray<FString>& Args)
 void UVremCheatManager::PrintEquipmentList_Command(const TArray<FString>& Args)
 {
     PrintEquipmentList();
+}
+
+void UVremCheatManager::PrintCharacterStates()
+{
+    APlayerController* PC = GetOuterAPlayerController();
+    if (!PC || !PC->GetPawn()) return;
+
+    IGameplayTagAssetInterface* TagInterface = Cast<IGameplayTagAssetInterface>(PC->GetPawn());
+    if (!TagInterface) return;
+
+    FGameplayTagContainer Container;
+    TagInterface->GetOwnedGameplayTags(Container);
+
+    UE_LOG(LogVrem, Log, TEXT("State Tags: %s"), *Container.ToStringSimple());
+}
+
+void UVremCheatManager::PrintStateTags_Command(const TArray<FString>& Args)
+{
+    PrintCharacterStates();
 }
 
 #undef REGISTER_CHEAT_CMD

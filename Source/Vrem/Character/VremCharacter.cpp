@@ -170,6 +170,8 @@ void AVremCharacter::Tick(float DeltaTime)
 			CameraSystem->SetTargetCameraMode(nullptr);
 		}
 	}
+
+	UpdateMovementStateTags();
 }
 
 inline void AVremCharacter::OnInputConfigLoaded(const UVremGameModeDefinition* InGameModeDefinition)
@@ -274,33 +276,19 @@ void AVremCharacter::StopJump(const FInputActionValue& Value)
 
 void AVremCharacter::Attack_Temp(const FInputActionValue& Value)
 {
-	if (CVarDebugCharacterInput.GetValueOnGameThread() > 0)
+	const bool bIsAiming =
+		HasStateTag(FVremGameplayTags::State_Aiming_ADS) ||
+		HasStateTag(FVremGameplayTags::State_Aiming_Scoped);
+
+	if (bIsAiming)
 	{
-		GEngine->AddOnScreenDebugMessage(
-			VremDebugKey::DebugKey_InputWeaponPrimary,
-			1.f,
-			FColor::Yellow,
-			TEXT("Attack"));
-	}
-	
-	if (bIsADS)
-	{
-		// range attack
-		AVremEquipmentActor* WeaponActor = EquipmentComponent->GetCurrentEquipmentActor();
-		if (IsValid(WeaponActor) == false)
+		if (CurrentWeapon.IsValid() == false)
 		{
-			UE_LOG(LogVremWeapon, Warning, TEXT("AVremCharacter::Attack_Temp WeaponActor not valid"));
+			UE_LOG(LogVremWeapon, Warning, TEXT("AVremCharacter::Attack_Temp CurrentWeapon not valid"));
 			return;
 		}
 
-		UVremWeaponComponent* WeaponComp = WeaponActor->FindComponentByClass<UVremWeaponComponent>();
-		if (IsValid(WeaponComp) == false)
-		{
-			UE_LOG(LogVremWeapon, Warning, TEXT("AVremCharacter::Attack_Temp WeaponComp not valid"));
-			return;
-		}
-
-		WeaponComp->Fire();
+		CurrentWeapon->Fire();
 	}
 	else
 	{
@@ -310,50 +298,44 @@ void AVremCharacter::Attack_Temp(const FInputActionValue& Value)
 
 void AVremCharacter::StopAttack_Temp(const FInputActionValue& Value)
 {
-	if (CVarDebugCharacterInput.GetValueOnGameThread() > 0)
-	{
-		GEngine->AddOnScreenDebugMessage(
-			VremDebugKey::DebugKey_InputWeaponPrimary,
-			1.f,
-			FColor::Yellow,
-			TEXT("StopAttack"));
-	}
+	const bool bIsAiming =
+		HasStateTag(FVremGameplayTags::State_Aiming_ADS) ||
+		HasStateTag(FVremGameplayTags::State_Aiming_Scoped);
 
-	if (bIsADS)
+	if (bIsAiming)
 	{
-		// range attack
-		AVremEquipmentActor* WeaponActor = EquipmentComponent->GetCurrentEquipmentActor();
-		if (IsValid(WeaponActor) == false)
+		if (CurrentWeapon.IsValid())
 		{
-			UE_LOG(LogVremWeapon, Warning, TEXT("AVremCharacter::StopAttack_Temp WeaponActor not valid"));
-			return;
+			CurrentWeapon->StopFire();
 		}
-
-		UVremWeaponComponent* WeaponComp = WeaponActor->FindComponentByClass<UVremWeaponComponent>();
-		if (IsValid(WeaponComp) == false)
-		{
-			UE_LOG(LogVremWeapon, Warning, TEXT("AVremCharacter::StopAttack_Temp WeaponComp not valid"));
-			return;
-		}
-
-		WeaponComp->StopFire();
-	}
-	else
-	{
-		// melee attack
 	}
 }
 
 void AVremCharacter::ToggleADS(const FInputActionValue& Value)
 {
-	bIsADS = !bIsADS;
-	if (bIsADS)
+	if (HasStateTag(FVremGameplayTags::State_Aiming_ADS))
 	{
-		CameraSystem->SetTargetCameraMode(ADSCameraMode);
+		RemoveStateTag(FVremGameplayTags::State_Aiming_ADS);
+
+		// 사격 중이었다면 중단
+		if (CurrentWeapon.IsValid())
+		{
+			CurrentWeapon->StopFire();
+		}
+
+		if (IsValid(CameraSystem))
+		{
+			CameraSystem->SetTargetCameraMode(DefaultCameraMode);
+		}
 	}
 	else
 	{
-		CameraSystem->SetTargetCameraMode(DefaultCameraMode);
+		AddStateTag(FVremGameplayTags::State_Aiming_ADS);
+
+		if (IsValid(CameraSystem))
+		{
+			CameraSystem->SetTargetCameraMode(ADSCameraMode);
+		}
 	}
 }
 
@@ -410,6 +392,15 @@ void AVremCharacter::TryBindInputByInputConfig()
 	{
 		UE_LOG(LogVremInput, Warning, TEXT("AVremCharacter::SetupPlayerInputComponent EnhancedInputComponent Is Invalid! NetRole : [%s]"), *GetNetRoleString(this));
 	}
+}
+
+float AVremCharacter::GetCurrentSpreadForUI() const
+{
+	if (CurrentWeapon.IsValid())
+	{
+		return CurrentWeapon->GetCurrentSpread();
+	}
+	return 0.f;
 }
 
 void AVremCharacter::OnItemInstanceCreated(UVremItemInstance* ItemInstance)
@@ -540,5 +531,30 @@ void AVremCharacter::HandleWeaponFired(const FRecoilProfile& RecoilProfile)
 	if (IsValid(CameraSystem))
 	{
 		CameraSystem->AddTransientFOVKick(RecoilProfile.FOVKick, RecoilProfile.FOVRecoverSpeed);
+	}
+}
+
+void AVremCharacter::UpdateMovementStateTags()
+{
+	// Moving
+	const bool bIsMoving = GetVelocity().SizeSquared2D() > FMath::Square(50.f);
+	if (bIsMoving)
+	{
+		AddStateTag(FVremGameplayTags::State_Movement_Moving);
+	}
+	else
+	{
+		RemoveStateTag(FVremGameplayTags::State_Movement_Moving);
+	}
+
+	// InAir
+	const bool bIsInAir = GetCharacterMovement()->IsFalling();
+	if (bIsInAir)
+	{
+		AddStateTag(FVremGameplayTags::State_Movement_InAir);
+	}
+	else
+	{
+		RemoveStateTag(FVremGameplayTags::State_Movement_InAir);
 	}
 }
