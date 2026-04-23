@@ -21,7 +21,7 @@ struct FEquipmentEntry : public FFastArraySerializerItem
 	TWeakObjectPtr<const UVremEquipmentDefinition> EquipmentDefiniton;
 
 	UPROPERTY()
-	EEquipmentState EquipmentState = EEquipmentState::Holstered;
+	EEquipmentState EquipmentState = EEquipmentState::Stowed;
 
 	UPROPERTY()  // ���� �߰� - ������
 	TWeakObjectPtr<AVremEquipmentActor> EquipmentActor;
@@ -54,6 +54,20 @@ struct FEquipmentList : public FFastArraySerializer
 	FEquipmentEntry* GetEntryFromIndex(const int32 InIndex)
 	{
 		return const_cast<FEquipmentEntry*>(static_cast<const FEquipmentList*>(this)->GetEntryFromIndex(InIndex));
+	}
+
+	FEquipmentEntry* GetEntryFromEquipmentState(EEquipmentState InEquipmentState)
+	{
+		return const_cast<FEquipmentEntry*>(static_cast<const FEquipmentList*>(this)->GetEntryFromEquipmentState(InEquipmentState));
+	}
+
+	const FEquipmentEntry* GetEntryFromEquipmentState(EEquipmentState InEquipmentState) const
+	{
+		return Entries.FindByPredicate(
+			[InEquipmentState](const FEquipmentEntry& Other)
+			{
+				return InEquipmentState == Other.EquipmentState;
+			});
 	}
 
 	const FEquipmentEntry* GetEntryFromIndex(const int32 InIndex) const
@@ -131,6 +145,7 @@ class VREM_API UVremEquipmentComponent : public UActorComponent
 	GENERATED_BODY()
 
 	friend struct FEquipmentList;
+	friend class AVremEquipmentActor;
 
 public:	
 	// Sets default values for this component's properties
@@ -141,16 +156,18 @@ public:
 	void InitializeFromOwner();
 public:
 	void SetCurrentWeapon(int32 InWeaponSlotIndex);
-	int32 GetEquipmentItemNum() const { return EquipmentList.GetNumEntries(); }
-	FString GetEquipmentListString() const { return EquipmentList.ToString(); }
-	AVremEquipmentActor* GetCurrentEquipmentActor() const;
-
 	void TryEquipItem(const UVremEquipmentDefinition* ItemToEquip, int32 InSlotIndex);
 	void TryUnequipItem(int32 InSlotIndex);
 	void TryUnequipItem(const UVremEquipmentDefinition* InEquipmentDefinition);
 
-	void OnEquipmentActorReplicated(AVremEquipmentActor* InActor);
+	int32 GetEquipmentItemNum() const { return EquipmentList.GetNumEntries(); }
+	FString GetEquipmentListString() const { return EquipmentList.ToString(); }
+	AVremEquipmentActor* GetCurrentEquipmentActor() const;
+	int32 GetOnHandSlotIndex() const;
+	int32 GetHolsteredSlotIndex() const;
+	EEquipmentSlotType GetOnHandSlotType() const;
 
+public:
 	UFUNCTION(Server, Reliable)
 	void ServerTryEquipItem(const UVremEquipmentDefinition* ItemToEquip, int32 InSlotIndex);
 
@@ -163,18 +180,20 @@ public:
 protected:
 	void OnInstanceStateChanged(EEquipmentState NewState, TSubclassOf<UAnimInstance> AnimLayerClass);
 	void OnInstanceDestroyed(TSubclassOf<UAnimInstance> AnimLayerClass);
+	void SwapOnHandWithHolstered();
+	void OnEquipmentActorReplicated(AVremEquipmentActor* InActor);
 public:
 	DECLARE_MULTICAST_DELEGATE_OneParam(FOnEquipmentChanged, const TSubclassOf<UAnimInstance>)
 	FOnEquipmentChanged OnEquipmenntAttached;
 	FOnEquipmentChanged OnEquipmenntDetached;
 
+	DECLARE_MULTICAST_DELEGATE_OneParam(FOnSlotOccupantChanged, AVremEquipmentActor* /*NewActor, nullable*/)
+	FOnSlotOccupantChanged OnRangedSlotChanged;
+	FOnSlotOccupantChanged OnMeleeSlotChanged;
+
 protected:
 	UFUNCTION()
 	void OnRep_EquipmentList();
-
-protected:
-	UPROPERTY(EditDefaultsOnly, Replicated)
-	int32 CurrentWeaponSlotIndex = INDEX_NONE;
 
 private:
 	UPROPERTY(ReplicatedUsing = OnRep_EquipmentList)

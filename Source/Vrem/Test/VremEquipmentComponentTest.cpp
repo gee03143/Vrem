@@ -139,7 +139,7 @@ bool FEquipmentSetCurrentWeaponTest::RunTest(const FString& Parameters)
     // 슬롯 1을 현재 무기로 설정
     EquipComp->SetCurrentWeapon(1);
     TestEqual(TEXT("Attached should fire on SetCurrentWeapon"), AttachedCount, 1);
-    TestEqual(TEXT("Slot 1 should be Equipped"), EquipComp->GetEquipmentStateAtSlot(1), EEquipmentState::Equipped);
+    TestEqual(TEXT("Slot 1 should be Equipped"), EquipComp->GetEquipmentStateAtSlot(1), EEquipmentState::OnHand);
 
    
     EquipComp->TryEquipItem(Pistol, 2);
@@ -149,7 +149,7 @@ bool FEquipmentSetCurrentWeaponTest::RunTest(const FString& Parameters)
     // 다른 슬롯으로 교체 → 이전 무기 Detached
     EquipComp->SetCurrentWeapon(2);
     TestEqual(TEXT("Slot 1 should be Holstered"), EquipComp->GetEquipmentStateAtSlot(1), EEquipmentState::Holstered);
-    TestEqual(TEXT("Slot 2 should be Equipped"), EquipComp->GetEquipmentStateAtSlot(2), EEquipmentState::Equipped);
+    TestEqual(TEXT("Slot 2 should be Equipped"), EquipComp->GetEquipmentStateAtSlot(2), EEquipmentState::OnHand);
     TestEqual(TEXT("Detached should fire for previous weapon"), DetachedCount, 3);
     TestEqual(TEXT("Attached should fire for new weapon"), AttachedCount, 2);
 
@@ -220,7 +220,7 @@ bool FEquipmentReplicationSimTest::RunTest(const FString& Parameters)
     // 복제 후 클라이언트 측 EquipmentState역시 갱신되어야 함
     ServerComp->SetCurrentWeapon(1);
     ClientComp->SimulateReplicateFrom(ServerComp);
-    TestEqual(TEXT("Client slot 1 should be Equipped after replication"), ClientComp->GetEquipmentStateAtSlot(1), EEquipmentState::Equipped);
+    TestEqual(TEXT("Client slot 1 should be Equipped after replication"), ClientComp->GetEquipmentStateAtSlot(1), EEquipmentState::OnHand);
 
     VremTestHelper::DestroyTestWorld(World);
     return true;

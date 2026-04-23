@@ -9,12 +9,22 @@
 
 FString FEquipmentEntry::ToString() const
 {
+	const TCHAR* StateStr = TEXT("Unknown");
+	switch (EquipmentState)
+	{
+	case EEquipmentState::OnHand:    StateStr = TEXT("OnHand"); break;
+	case EEquipmentState::Holstered: StateStr = TEXT("Holstered"); break;
+	case EEquipmentState::Stowed:    StateStr = TEXT("Stowed"); break;
+	default: break;
+	}
+
 	return FString::Printf(TEXT("EquipmentIndex: [%d] EquipmentDef: [%s], State: [%s], Instance: [%s], EquipmentActor: [%s]"),
 		EquipmentIndex,
-		*EquipmentDefiniton->GetName(),
-		(EquipmentState == EEquipmentState::Equipped) ? TEXT("Equipped") : TEXT("Holstered"),
+		EquipmentDefiniton.IsValid() ? *EquipmentDefiniton->GetName() : TEXT("Invalid"),
+		StateStr,
 		IsValid(EquipmentInstance) ? *EquipmentInstance->GetName() : TEXT("Invalid"),
 		EquipmentActor.IsValid() ? *EquipmentActor->GetName() : TEXT("Invalid"));
+
 }
 
 void FEquipmentEntry::SetAndApplyEquipmentState(EEquipmentState InEquipmentState)
@@ -68,6 +78,19 @@ void FEquipmentList::AddEntry(const UVremEquipmentDefinition* InEquipmentDefinit
 		NewEntry.EquipmentDefiniton = InEquipmentDefinition;
 		NewEntry.EquipmentIndex = InIndex;
 
+		const FEquipmentEntry* HolsterEntry = GetEntryFromEquipmentState(EEquipmentState::Holstered);
+		if (HolsterEntry == nullptr)
+		{
+			const FEquipmentEntry* OnHandEntry = GetEntryFromEquipmentState(EEquipmentState::OnHand);
+			if (OnHandEntry)
+			{
+				if (OnHandEntry->EquipmentDefiniton->SlotType != NewEntry.EquipmentDefiniton->SlotType)
+				{
+					NewEntry.SetAndApplyEquipmentState(EEquipmentState::Holstered);
+				}
+			}
+		}
+
 		if (OwnerComponent.IsValid())
 		{
 			CreateInstanceForEntry(NewEntry, TEXT("AddEntry"));
@@ -79,7 +102,7 @@ void FEquipmentList::AddEntry(const UVremEquipmentDefinition* InEquipmentDefinit
 	}
 	else
 	{
-		UE_LOG(LogVremEquipment, Warning, TEXT("FEquipmentList::AddEntry: Failed To Load EquipmentDefinition, LoadedPath : %s"), *InEquipmentDefinition->GetName());
+		UE_LOG(LogVremEquipment, Warning, TEXT("FEquipmentList::AddEntry: EquipmentDefinition is null"));
 	}
 }
 
@@ -93,7 +116,10 @@ void FEquipmentList::RemoveEntry(int32 InIndex)
 	{
 		if (Entries[i].EquipmentIndex == InIndex)
 		{
-			Entries[i].EquipmentInstance->Cleanup();
+			if (IsValid(Entries[i].EquipmentInstance))
+			{
+				Entries[i].EquipmentInstance->Cleanup();
+			}
 			Entries.RemoveAt(i);
 
 			MarkArrayDirty();
@@ -244,7 +270,6 @@ UVremEquipmentComponent::UVremEquipmentComponent()
 void UVremEquipmentComponent::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
 {
 	DOREPLIFETIME(UVremEquipmentComponent, EquipmentList);
-	DOREPLIFETIME(UVremEquipmentComponent, CurrentWeaponSlotIndex);
 }
 
 void UVremEquipmentComponent::InitializeFromOwner()
@@ -257,26 +282,61 @@ void UVremEquipmentComponent::SetCurrentWeapon(int32 InWeaponSlotIndex)
 	check(IsValid(GetOwner()));
 	check(GetOwner()->HasAuthority());
 
-	FEquipmentEntry* EquipmentEntry = EquipmentList.GetEntryFromIndex(CurrentWeaponSlotIndex);
-	if (EquipmentEntry != nullptr)
+	FEquipmentEntry* NewEntry = EquipmentList.GetEntryFromIndex(InWeaponSlotIndex);
+	if (NewEntry == nullptr) 
+	{	
+		return;
+	}
+	if (NewEntry->EquipmentState == EEquipmentState::OnHand)
 	{
-		EquipmentEntry->SetAndApplyEquipmentState(EEquipmentState::Holstered);
-		EquipmentList.MarkItemDirty(*EquipmentEntry);
+		return;
 	}
 
-	CurrentWeaponSlotIndex = InWeaponSlotIndex;
-
-	EquipmentEntry = EquipmentList.GetEntryFromIndex(CurrentWeaponSlotIndex);
-	if (EquipmentEntry != nullptr)
+	// Holstered → OnHand 전환은 swap 헬퍼 사용
+	if (NewEntry->EquipmentState == EEquipmentState::Holstered)
 	{
-		EquipmentEntry->SetAndApplyEquipmentState(EEquipmentState::Equipped);
-		EquipmentList.MarkItemDirty(*EquipmentEntry);
+		SwapOnHandWithHolstered();
+		return;
 	}
+
+	// Stowed → OnHand 전환
+	const UVremEquipmentDefinition* NewDef = NewEntry->EquipmentDefiniton.Get();
+	if (NewDef == nullptr) 
+	{
+		return;
+	}
+
+	FEquipmentEntry* PrevOnHand = EquipmentList.GetEntryFromEquipmentState(EEquipmentState::OnHand);
+	if (PrevOnHand && PrevOnHand != NewEntry)
+	{
+		const UVremEquipmentDefinition* PrevDef = PrevOnHand->EquipmentDefiniton.Get();
+		const bool bSameType = PrevDef && PrevDef->SlotType == NewDef->SlotType;
+
+		if (bSameType)
+		{
+			PrevOnHand->SetAndApplyEquipmentState(EEquipmentState::Stowed);
+			EquipmentList.MarkItemDirty(*PrevOnHand);
+		}
+		else
+		{
+			FEquipmentEntry* PrevOnHolstered = EquipmentList.GetEntryFromEquipmentState(EEquipmentState::Holstered);
+			if (PrevOnHolstered)
+			{
+				PrevOnHolstered->SetAndApplyEquipmentState(EEquipmentState::Stowed);
+				EquipmentList.MarkItemDirty(*PrevOnHolstered);
+			}
+
+			PrevOnHand->SetAndApplyEquipmentState(EEquipmentState::Holstered);
+			EquipmentList.MarkItemDirty(*PrevOnHand);
+		}
+	}
+	NewEntry->SetAndApplyEquipmentState(EEquipmentState::OnHand);
+	EquipmentList.MarkItemDirty(*NewEntry);
 }
 
 AVremEquipmentActor* UVremEquipmentComponent::GetCurrentEquipmentActor() const
 {
-	const FEquipmentEntry* Entry = EquipmentList.GetEntryFromIndex(CurrentWeaponSlotIndex);
+	const FEquipmentEntry* Entry = EquipmentList.GetEntryFromEquipmentState(EEquipmentState::OnHand);
 	if (Entry == nullptr)
 	{
 		UE_LOG(LogVremEquipment, Warning, TEXT("GetCurrentEquipmentActor: CurrentWeaponEntry is nullptr"));
@@ -284,6 +344,27 @@ AVremEquipmentActor* UVremEquipmentComponent::GetCurrentEquipmentActor() const
 	}
 
 	return Entry->EquipmentActor.Get();
+}
+
+void UVremEquipmentComponent::SwapOnHandWithHolstered()
+{
+	FEquipmentEntry* HolsteredEntry = EquipmentList.GetEntryFromEquipmentState(EEquipmentState::Holstered);
+	if (HolsteredEntry == nullptr)
+	{
+		return;
+	}
+
+	FEquipmentEntry* OnHandEntry = EquipmentList.GetEntryFromEquipmentState(EEquipmentState::OnHand);
+	if (OnHandEntry)
+	{
+		// OnHand -> Holster
+		OnHandEntry->SetAndApplyEquipmentState(EEquipmentState::Holstered);
+		EquipmentList.MarkItemDirty(*OnHandEntry);
+	}
+
+	// Holster → OnHand
+	HolsteredEntry->SetAndApplyEquipmentState(EEquipmentState::OnHand);
+	EquipmentList.MarkItemDirty(*HolsteredEntry);
 }
 
 void UVremEquipmentComponent::TryEquipItem(const UVremEquipmentDefinition* ItemToEquip, int32 InSlotIndex)
@@ -301,8 +382,6 @@ void UVremEquipmentComponent::TryUnequipItem(int32 InSlotIndex)
 {
 	check(IsValid(GetOwner()));
 	check(GetOwner()->HasAuthority());
-
-	FEquipmentEntry* EquipmentEntry = EquipmentList.GetEntryFromIndex(InSlotIndex);
 
 	EquipmentList.RemoveEntry(InSlotIndex);
 }
@@ -343,10 +422,11 @@ void UVremEquipmentComponent::OnInstanceStateChanged(EEquipmentState NewState, T
 {
 	switch (NewState)
 	{
-	case EEquipmentState::Equipped:
+	case EEquipmentState::OnHand:
 		OnEquipmenntAttached.Broadcast(AnimLayerClass);
 		break;
 	case EEquipmentState::Holstered:
+	case EEquipmentState::Stowed:
 		OnEquipmenntDetached.Broadcast(AnimLayerClass);
 		break;
 	}
@@ -360,6 +440,24 @@ void UVremEquipmentComponent::OnInstanceDestroyed(TSubclassOf<UAnimInstance> Ani
 void UVremEquipmentComponent::OnRep_EquipmentList()
 {
 	EquipmentList.SetOwner(this);
+}
+
+int32 UVremEquipmentComponent::GetOnHandSlotIndex() const
+{
+	const FEquipmentEntry* Entry = EquipmentList.GetEntryFromEquipmentState(EEquipmentState::OnHand);
+	return Entry ? Entry->EquipmentIndex : INDEX_NONE;
+}
+
+int32 UVremEquipmentComponent::GetHolsteredSlotIndex() const
+{
+	const FEquipmentEntry* Entry = EquipmentList.GetEntryFromEquipmentState(EEquipmentState::Holstered);
+	return Entry ? Entry->EquipmentIndex : INDEX_NONE;
+}
+
+EEquipmentSlotType UVremEquipmentComponent::GetOnHandSlotType() const
+{
+	const FEquipmentEntry* Entry = EquipmentList.GetEntryFromEquipmentState(EEquipmentState::OnHand);
+	return Entry ? Entry->EquipmentDefiniton->SlotType : EEquipmentSlotType::NUM_EEquipmentSlotType;
 }
 
 #if WITH_AUTOMATION_WORKER

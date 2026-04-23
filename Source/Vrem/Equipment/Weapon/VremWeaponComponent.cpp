@@ -10,6 +10,7 @@
 #include "NiagaraFunctionLibrary.h"
 #include "NiagaraComponent.h"
 #include "GameplayTagAssetInterface.h"
+#include "VremWeaponHandlerInterface.h"
 
 static TAutoConsoleVariable<int32> CVarDebugCharacterShooting(
     TEXT("vrem.DebugCharacterShooting"),
@@ -96,7 +97,10 @@ void UVremWeaponComponent::ExecuteFire()
 
     if (IsValid(WeaponDefinition))
     {
-        OnWeaponFired.Broadcast(WeaponDefinition->RecoilProfile);
+        if (IVremWeaponHandler* Handler = Cast<IVremWeaponHandler>(GetWeaponOwner()))
+        {
+            Handler->OnWeaponFired(WeaponDefinition->RecoilProfile);
+        }
     }
 }
 

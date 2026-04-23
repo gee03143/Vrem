@@ -64,9 +64,6 @@ protected:
     AActor* GetWeaponOwner() const;
 
     void AccumulateBloom();
-public:
-    DECLARE_MULTICAST_DELEGATE_OneParam(FOnWeaponFired, const FRecoilProfile& /*RecoilProfile*/)
-    FOnWeaponFired OnWeaponFired;
 
 protected:
     // client only, 애니메이션이 반영된 총기 머즐 소켓 위치

@@ -6,6 +6,7 @@
 #include "GameFramework/Character.h"
 #include "GameplayTagAssetInterface.h"
 #include "GameplayTagContainer.h"
+#include "Vrem/Equipment/Weapon/VremWeaponHandlerInterface.h"
 #include "VremCharacter.generated.h"
 
 class UHealthComponent;
@@ -25,7 +26,7 @@ struct FRecoilProfile;
 // TODO: 컴포넌트 구성은 추후 BP에서 관리하는 방향으로 리팩터링 예정.
 // 현재는 개발 편의를 위해 C++에서 모든 컴포넌트를 기본 생성.
 UCLASS()
-class VREM_API AVremCharacter : public ACharacter, public IGameplayTagAssetInterface
+class VREM_API AVremCharacter : public ACharacter, public IGameplayTagAssetInterface, public IVremWeaponHandler
 {
 	GENERATED_BODY()
 
@@ -88,15 +89,22 @@ protected:
 	void OnEquipmentActorAttached(const TSubclassOf<UAnimInstance> InAnimLayerClass);
 	void OnEquipmentActorDetached(const TSubclassOf<UAnimInstance> InAnimLayerClass);
 
-	void HandleWeaponFired(const FRecoilProfile& RecoilProfile);
+	void HandleRangeAttackInput(bool bStart = true);
+	void HandleMeleeAttackInput();
+
+	void RequestSetCurrentWeapon(int32 InSlotIndex);
+
+	// ~IVremWeaponHandler Interface Begin
+	void OnWeaponFired(const FRecoilProfile& RecoilProfile);
+	virtual void OnMeleeAttackStarted(int32 ComboIndex) override;
+	virtual void OnMeleeAttackFinished() override;
+	// ~IVremWeaponHandler Interface End
 protected:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly)
 	TObjectPtr<UVremInventoryComponent> InventoryComponent;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly)
 	TObjectPtr<UVremEquipmentComponent> EquipmentComponent;
-
-	TWeakObjectPtr<UVremWeaponComponent> CurrentWeapon;
 #pragma endregion weaponsystem
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly)

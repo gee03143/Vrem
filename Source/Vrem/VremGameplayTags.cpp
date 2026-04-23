@@ -16,4 +16,6 @@ namespace FVremGameplayTags
 	UE_DEFINE_GAMEPLAY_TAG_COMMENT(State_Aiming_Scoped, "State.Aiming.Scoped", "Character is in scope view");
 	UE_DEFINE_GAMEPLAY_TAG_COMMENT(State_Movement_Moving, "State.Movement.Moving", "Character is moving");
 	UE_DEFINE_GAMEPLAY_TAG_COMMENT(State_Movement_InAir, "State.Movement.InAir", "Character is in air");
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(State_Combat_MeleeAttacking, "State.Combat.MeleeAttacking", "Melee swing animation is playing");
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(State_Combat_MeleeMode, "State.Combat.MeleeMode", "Melee weapon is currently held in hand");
 }

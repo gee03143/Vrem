@@ -141,9 +141,6 @@ void UVremEquipmentInstance::AttachToSocket(const FName& SocketName, const FTran
 		return;
 	}
 
-	// server only
-	check(ParentActor->HasAuthority());
-
 	if (IsValid(EquipmentActor) == false)
 	{
 		UE_LOG(LogVremEquipment, Warning, TEXT("UVremEquipmentInstance::AttachToSocket: EquipmentActor is invalid"));
@@ -181,25 +178,19 @@ void UVremEquipmentInstance::ApplyEquipmentState()
 		return;
 	}
 
-	// 서버: 소켓 부착 수행
-	// 클라이언트: 소켓 부착은 서버에서 복제되므로 스킵
-	const bool bHasAuthority = ParentActor.IsValid() && ParentActor->HasAuthority();
-
 	switch (EquipmentState)
 	{
-	case EEquipmentState::Equipped:
-		if (bHasAuthority)
-		{ 
-			AttachToSocket(EquipmentDefinition->AttachSocketName, EquipmentDefinition->AttachOffset);
-		}
+	case EEquipmentState::OnHand:
+		AttachToSocket(EquipmentDefinition->AttachSocketName, EquipmentDefinition->AttachOffset);
 		OnStateChanged.Broadcast(EquipmentState, EquipmentDefinition->AnimLayerClass);
 		break;
 
 	case EEquipmentState::Holstered:
-		if (bHasAuthority)
-		{
-			AttachToSocket(EquipmentDefinition->HolsterSocketName, EquipmentDefinition->HolsterOffset);
-		}
+		AttachToSocket(EquipmentDefinition->HolsterSocketName, EquipmentDefinition->HolsterOffset);
+		OnStateChanged.Broadcast(EquipmentState, EquipmentDefinition->AnimLayerClass);
+		break;
+	case EEquipmentState::Stowed:
+		AttachToSocket(EquipmentDefinition->StowedSocketName, EquipmentDefinition->StowedOffset);
 		OnStateChanged.Broadcast(EquipmentState, EquipmentDefinition->AnimLayerClass);
 		break;
 	default:

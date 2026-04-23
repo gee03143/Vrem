@@ -14,9 +14,18 @@ class AVremEquipmentActor;
 UENUM()
 enum class EEquipmentState : uint8
 {
-	Equipped,
-	Holstered,
+	OnHand,      // 손에 들고 사용 중
+	Holstered,   // 홀스터에 있음 (즉시 꺼낼 수 있는 준비 상태)
+	Stowed,      // 보관 중 (2차 저장)
 	NUM_EQUIPMENTSTATE
+};
+
+UENUM(BlueprintType)
+enum class EEquipmentSlotType : uint8
+{
+    Ranged  UMETA(DisplayName = "Ranged"),
+    Melee   UMETA(DisplayName = "Melee"),
+	NUM_EEquipmentSlotType UMETA(Hidden)
 };
 
 UCLASS()
@@ -28,20 +37,29 @@ public:
 	UPROPERTY(EditDefaultsOnly)
 	TSoftClassPtr<AActor> EquipmentActorClass;
 
-	UPROPERTY(EditDefaultsOnly)
+	UPROPERTY(EditDefaultsOnly, Category = "Attach")
 	FName AttachSocketName;
 
-	UPROPERTY(EditDefaultsOnly)
+	UPROPERTY(EditDefaultsOnly, Category = "Attach")
 	FTransform AttachOffset;
 
-	UPROPERTY(EditDefaultsOnly)
+	UPROPERTY(EditDefaultsOnly, Category = "Attach")
 	FName HolsterSocketName;
 
-	UPROPERTY(EditDefaultsOnly)
+	UPROPERTY(EditDefaultsOnly, Category = "Attach")
 	FTransform HolsterOffset;
 
-	UPROPERTY(EditDefaultsOnly)
+    UPROPERTY(EditDefaultsOnly, Category = "Socket|Stowed")
+    FName StowedSocketName;
+
+    UPROPERTY(EditDefaultsOnly, Category = "Socket|Stowed")
+    FTransform StowedOffset;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Animation")
     TSubclassOf<UAnimInstance> AnimLayerClass;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Slot")
+    EEquipmentSlotType SlotType = EEquipmentSlotType::Ranged;
 };
 
 UCLASS()

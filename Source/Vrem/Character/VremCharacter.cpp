@@ -25,6 +25,7 @@
 #include "Vrem/Equipment/ItemFragment_Equipment.h"
 #include "Vrem/Equipment/VremEquipmentActor.h"
 #include "Vrem/Equipment/Weapon/VremWeaponComponent.h"
+#include "Vrem/Equipment/MeleeWeapon/VremMeleeComponent.h"
 #include "Vrem/Animation/VremAnimInstance.h"
 #include "Vrem/VremAssetManager.h"
 #include "Components/CapsuleComponent.h"
@@ -282,17 +283,11 @@ void AVremCharacter::Attack_Temp(const FInputActionValue& Value)
 
 	if (bIsAiming)
 	{
-		if (CurrentWeapon.IsValid() == false)
-		{
-			UE_LOG(LogVremWeapon, Warning, TEXT("AVremCharacter::Attack_Temp CurrentWeapon not valid"));
-			return;
-		}
-
-		CurrentWeapon->Fire();
+		HandleRangeAttackInput(true /*bStart*/);
 	}
 	else
 	{
-		// melee attack
+		HandleMeleeAttackInput();
 	}
 }
 
@@ -304,24 +299,35 @@ void AVremCharacter::StopAttack_Temp(const FInputActionValue& Value)
 
 	if (bIsAiming)
 	{
-		if (CurrentWeapon.IsValid())
-		{
-			CurrentWeapon->StopFire();
-		}
+		HandleRangeAttackInput(false /*bStart*/);
 	}
 }
 
 void AVremCharacter::ToggleADS(const FInputActionValue& Value)
 {
+	// 근접 공격 모션 중엔 ADS 전환 차단
+	if (HasStateTag(FVremGameplayTags::State_Combat_MeleeAttacking))
+	{
+		return;
+	}
+
+	// OnHand가 근접이면 원거리로 먼저 복귀 시도
+	if (IsValid(EquipmentComponent) && EquipmentComponent->GetOnHandSlotType() == EEquipmentSlotType::Melee)
+	{
+		const int32 HolsteredIndex = EquipmentComponent->GetHolsteredSlotIndex();
+		if (HolsteredIndex == INDEX_NONE)
+		{
+			// 복귀할 원거리 무기 없음 → ADS 진입 불가
+			UE_LOG(LogVremEquipment, Log, TEXT("ToggleADS: No holstered ranged weapon to return to"));
+			return;
+		}
+		RequestSetCurrentWeapon(HolsteredIndex);
+	}
+
 	if (HasStateTag(FVremGameplayTags::State_Aiming_ADS))
 	{
 		RemoveStateTag(FVremGameplayTags::State_Aiming_ADS);
-
-		// 사격 중이었다면 중단
-		if (CurrentWeapon.IsValid())
-		{
-			CurrentWeapon->StopFire();
-		}
+		HandleRangeAttackInput(false);
 
 		if (IsValid(CameraSystem))
 		{
@@ -396,9 +402,16 @@ void AVremCharacter::TryBindInputByInputConfig()
 
 float AVremCharacter::GetCurrentSpreadForUI() const
 {
-	if (CurrentWeapon.IsValid())
+	AVremEquipmentActor* OnHandActor = EquipmentComponent->GetCurrentEquipmentActor();
+	if (IsValid(OnHandActor) == false)
 	{
-		return CurrentWeapon->GetCurrentSpread();
+		return 0.f;
+	}
+
+	UVremWeaponComponent* Weapon = OnHandActor->FindComponentByClass<UVremWeaponComponent>();
+	if (IsValid(Weapon))
+	{
+		return Weapon->GetCurrentSpread();
 	}
 	return 0.f;
 }
@@ -453,73 +466,36 @@ void AVremCharacter::OnItemInstanceRemoved(const FPrimaryAssetId& ItemId)
 
 void AVremCharacter::OnEquipmentActorAttached(const TSubclassOf<UAnimInstance> InAnimLayerClass)
 {
-	if (InAnimLayerClass == nullptr)
+	if (IsValid(GetMesh()) == false)
 	{
-		UE_LOG(LogVremEquipment, Warning, TEXT("AVremCharacter::OnEquipmentActorAttached AnimLayerClass is nullptr"));
 		return;
 	}
 
 	UVremAnimInstance* AnimInstance = Cast<UVremAnimInstance>(GetMesh()->GetAnimInstance());
-	if (IsValid(AnimInstance))
+	if (IsValid(AnimInstance) && InAnimLayerClass != nullptr)
 	{
 		AnimInstance->SetWeaponAnimLayer(InAnimLayerClass);
-	}
-
-	if (IsValid(EquipmentComponent))
-	{
-		AVremEquipmentActor* EquipActor = EquipmentComponent->GetCurrentEquipmentActor();
-		if (IsValid(EquipActor))
-		{
-			UVremWeaponComponent* Weapon = EquipActor->FindComponentByClass<UVremWeaponComponent>();
-			if (IsValid(Weapon) && Weapon != CurrentWeapon.Get())
-			{
-				CurrentWeapon = Weapon;
-				CurrentWeapon->OnWeaponFired.AddUObject(this, &ThisClass::HandleWeaponFired);
-			}
-		}
 	}
 }
 
 void AVremCharacter::OnEquipmentActorDetached(const TSubclassOf<UAnimInstance> InAnimLayerClass)
 {	
-	UE_LOG(LogVremEquipment, Warning, TEXT("AVremCharacter::OnEquipmentActorDetached"));
-	if (InAnimLayerClass == nullptr)
+	if (IsValid(GetMesh()) == false)
 	{
-		UE_LOG(LogVremEquipment, Warning, TEXT("AVremCharacter::OnEquipmentActorDetached AnimLayerClass is nullptr"));
 		return;
 	}
 
 	UVremAnimInstance* AnimInstance = Cast<UVremAnimInstance>(GetMesh()->GetAnimInstance());
-	if (IsValid(AnimInstance) == false)
+	if (IsValid(AnimInstance) && InAnimLayerClass != nullptr)
 	{
-		UE_LOG(LogVremEquipment, Warning, TEXT("AVremCharacter::OnEquipmentActorDetached AnimInstance is nullptr"));
-		return;
-	}
-
-	if (AnimInstance->GetCurrentLayer() == InAnimLayerClass)
-	{
-		AnimInstance->SetWeaponAnimLayer(nullptr);
-	}
-
-	if (CurrentWeapon.IsValid())
-	{
-		AVremEquipmentActor* CurrentEquipActor = EquipmentComponent->GetCurrentEquipmentActor();
-		UVremWeaponComponent* CurrentlyEquippedWeapon = nullptr;
-		if (IsValid(CurrentEquipActor))
+		if (AnimInstance->GetCurrentLayer() == InAnimLayerClass)
 		{
-			CurrentlyEquippedWeapon = CurrentEquipActor->FindComponentByClass<UVremWeaponComponent>();
-		}
-
-		// 현재 장착된 무기가 캐시된 CurrentWeapon과 다르면 해제
-		if (CurrentlyEquippedWeapon != CurrentWeapon.Get())
-		{
-			CurrentWeapon->OnWeaponFired.RemoveAll(this);
-			CurrentWeapon = nullptr;
+			AnimInstance->SetWeaponAnimLayer(nullptr);
 		}
 	}
 }
 
-void AVremCharacter::HandleWeaponFired(const FRecoilProfile& RecoilProfile)
+void AVremCharacter::OnWeaponFired(const FRecoilProfile& RecoilProfile)
 {
 	const float VerticalPitch = -RecoilProfile.VerticalKick
 		+ FMath::RandRange(-RecoilProfile.VerticalVariance, RecoilProfile.VerticalVariance);
@@ -531,6 +507,92 @@ void AVremCharacter::HandleWeaponFired(const FRecoilProfile& RecoilProfile)
 	if (IsValid(CameraSystem))
 	{
 		CameraSystem->AddTransientFOVKick(RecoilProfile.FOVKick, RecoilProfile.FOVRecoverSpeed);
+	}
+}
+
+void AVremCharacter::OnMeleeAttackStarted(int32 ComboIndex)
+{
+	AddStateTag(FVremGameplayTags::State_Combat_MeleeAttacking);
+}
+
+void AVremCharacter::OnMeleeAttackFinished()
+{
+	RemoveStateTag(FVremGameplayTags::State_Combat_MeleeAttacking);
+}
+
+void AVremCharacter::HandleRangeAttackInput(bool bStart)
+{
+	if (IsValid(EquipmentComponent) == false)
+	{
+		return;
+	}
+
+	AVremEquipmentActor* OnHandActor = EquipmentComponent->GetCurrentEquipmentActor();
+	if (IsValid(OnHandActor) == false)
+	{
+		return;
+	}
+
+	UVremWeaponComponent* Weapon = OnHandActor->FindComponentByClass<UVremWeaponComponent>();
+	if (IsValid(Weapon))
+	{
+		if (bStart)
+		{
+			Weapon->Fire();
+		}
+		else
+		{
+			Weapon->StopFire();
+		}
+	}
+}
+
+void AVremCharacter::HandleMeleeAttackInput()
+{
+	// 근접 공격 모션 중이면 재입력 차단
+	if (HasStateTag(FVremGameplayTags::State_Combat_MeleeAttacking))
+	{
+		return;
+	}
+
+	if (IsValid(EquipmentComponent) == false) return;
+
+	const EEquipmentSlotType OnHandType = EquipmentComponent->GetOnHandSlotType();
+	if (OnHandType == EEquipmentSlotType::Melee)
+	{
+		// 이미 근접이 손에 있음 → 공격
+		AVremEquipmentActor* OnHandActor = EquipmentComponent->GetCurrentEquipmentActor();
+		if (IsValid(OnHandActor) == false) 
+		{
+			return;
+		}
+
+		UVremMeleeComponent* Melee = OnHandActor->FindComponentByClass<UVremMeleeComponent>();
+		if (IsValid(Melee))
+		{
+			Melee->TryMeleeAttack();
+		}
+	}
+	else if (OnHandType == EEquipmentSlotType::Ranged)
+	{
+		// 원거리가 손에 있음 → Holstered(근접)로 스왑
+		const int32 HolsteredIndex = EquipmentComponent->GetHolsteredSlotIndex();
+		if (HolsteredIndex != INDEX_NONE)
+		{
+			RequestSetCurrentWeapon(HolsteredIndex);
+		}
+	}
+}
+
+void AVremCharacter::RequestSetCurrentWeapon(int32 InSlotIndex)
+{
+	if (HasAuthority())
+	{
+		EquipmentComponent->SetCurrentWeapon(InSlotIndex);
+	}
+	else
+	{
+		EquipmentComponent->ServerSetCurrentWeapon(InSlotIndex);
 	}
 }
 
