@@ -98,7 +98,7 @@ bool FInventoryRemoveItemTest::RunTest(const FString& Parameters)
     UVremInventoryComponent* InvComp = Actor->FindComponentByClass<UVremInventoryComponent>();
     InvComp->InitializeFromOwner();
 
-    // 빈 인벤토리에서 제거 시도 → 크래시 없어야 함
+    // 빈 인벤토리에서 제거 시도 -> 크래시 없어야 함
     FPrimaryAssetId FakeId(TEXT("VremItemDefinition"), TEXT("FakeItem"));
     InvComp->TestRemoveItem(FakeId);
     TestEqual(TEXT("Count should remain 0"), InvComp->GetInventoryItemNum(), 0);
@@ -108,7 +108,7 @@ bool FInventoryRemoveItemTest::RunTest(const FString& Parameters)
     InvComp->TestAddItem(ItemDef, 3);
     TestEqual(TEXT("Entry count should be 1"), InvComp->GetInventoryItemNum(), 1);
 
-    // Count 3 → 2 → 1 → 0 (제거)
+    // Count 3 -> 2 -> 1 -> 0 (제거)
     InvComp->TestRemoveItem(ItemDef->GetPrimaryAssetId());
     TestEqual(TEXT("Entry should still exist at count 2"), InvComp->GetInventoryItemNum(), 1);
 

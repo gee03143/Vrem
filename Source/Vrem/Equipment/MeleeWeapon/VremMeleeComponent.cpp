@@ -205,3 +205,18 @@ void UVremMeleeComponent::MulticastOnMeleeAttack_Implementation(int32 ComboIndex
 
     UE_LOG(LogVremWeapon, Log, TEXT("MulticastOnMeleeAttack ComboIndex=%d"), ComboIndex);
 }
+
+#if WITH_AUTOMATION_WORKER
+
+void UVremMeleeComponent::SimulateAttackStart_ForTest()
+{
+    if (IsValid(MeleeDefinition) == false || MeleeDefinition->GetComboCount() == 0) return;
+    if (bIsAttacking) return;
+
+    bIsAttacking = true;
+    bIsInComboWindow = false;
+    CurrentComboIndex = (CurrentComboIndex + 1) % MeleeDefinition->GetComboCount();
+}
+
+#endif // WITH_AUTOMATION_WORKER
+

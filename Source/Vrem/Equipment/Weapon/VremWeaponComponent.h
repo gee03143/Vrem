@@ -85,4 +85,25 @@ private:
     bool bWantsToFire = false;
 
     float CurrentBloom = 0.f;
+
+#if WITH_AUTOMATION_WORKER
+public:
+    // Definition 주입
+    void SetWeaponDefinition_ForTest(UVremWeaponDefinition* InDef)
+    {
+        WeaponDefinition = InDef;
+    }
+
+    // 상태 조회
+    float GetCurrentBloom_ForTest() const { return CurrentBloom; }
+    bool GetCanFire_ForTest() const { return bCanFire; }
+    bool GetWantsToFire_ForTest() const { return bWantsToFire; }
+
+    // 상태 조작
+    void AccumulateBloom_ForTest() { AccumulateBloom(); }
+    void SimulateBloomRecover_ForTest(float DeltaTime);
+    void StartFireCooldown_ForTest() { StartFireCooldown(); }
+    void OnFireCooldownFinished_ForTest() { OnFireCooldownFinished(); }
+    void SetWantsToFire_ForTest(bool bValue) { bWantsToFire = bValue; }
+#endif
 };

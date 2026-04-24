@@ -375,3 +375,12 @@ FVector UVremWeaponComponent::GetLogicalMuzzleLocation() const
     return IsValid(WeaponOwner) ? WeaponOwner->GetActorTransform().TransformPosition(ShootingOffset) : FVector::ZeroVector;
 }
 
+#if WITH_AUTOMATION_WORKER
+void UVremWeaponComponent::SimulateBloomRecover_ForTest(float DeltaTime)
+{
+    if (WeaponDefinition && CurrentBloom > 0.f)
+    {
+        CurrentBloom = FMath::Max(0.f, CurrentBloom - WeaponDefinition->SpreadProfile.BloomRecoverSpeed * DeltaTime);
+    }
+}
+#endif

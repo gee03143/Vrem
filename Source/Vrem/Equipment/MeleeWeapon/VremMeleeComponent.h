@@ -54,4 +54,26 @@ private:
 
     FTimerHandle AttackDurationTimer;
     FTimerHandle ComboWindowTimer;
+
+#if WITH_AUTOMATION_WORKER
+public:
+    // Definition 주입
+    void SetMeleeDefinition_ForTest(UVremMeleeWeaponDefinition* InDef)
+    {
+        MeleeDefinition = InDef;
+    }
+
+    // 상태 조회
+    int32 GetCurrentComboIndex_ForTest() const { return CurrentComboIndex; }
+    bool IsAttacking_ForTest() const { return bIsAttacking; }
+    bool IsInComboWindow_ForTest() const { return bIsInComboWindow; }
+
+    // 타이머 콜백 수동 호출
+    void TriggerAttackDurationFinished_ForTest() { OnAttackDurationFinished(); }
+    void TriggerComboWindowFinished_ForTest() { OnComboWindowFinished(); }
+
+    // 테스트 전용: ExecuteMeleeAttack의 상태 변화 부분만 수동 시뮬레이션
+    // (Controller 의존 없음, 타이머 설정 없음)
+    void SimulateAttackStart_ForTest();
+#endif
 };
