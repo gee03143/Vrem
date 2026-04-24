@@ -155,7 +155,7 @@ public:
 
 	void InitializeFromOwner();
 public:
-	void SetCurrentWeapon(int32 InWeaponSlotIndex);
+	void SetCurrentWeapon(int32 InWeaponSlotIndex, EEquipmentState PrevOnHandDest = EEquipmentState::Stowed);
 	void TryEquipItem(const UVremEquipmentDefinition* ItemToEquip, int32 InSlotIndex);
 	void TryUnequipItem(int32 InSlotIndex);
 	void TryUnequipItem(const UVremEquipmentDefinition* InEquipmentDefinition);
@@ -175,12 +175,11 @@ public:
 	void ServerTryUnequipItem(int32 InSlotIndex);
 
 	UFUNCTION(Server, Reliable)
-	void ServerSetCurrentWeapon(int32 InSlotIndex);
+	void ServerSetCurrentWeapon(int32 InSlotIndex, EEquipmentState PrevOnHandDest = EEquipmentState::Stowed);
 
 protected:
 	void OnInstanceStateChanged(EEquipmentState NewState, TSubclassOf<UAnimInstance> AnimLayerClass);
 	void OnInstanceDestroyed(TSubclassOf<UAnimInstance> AnimLayerClass);
-	void SwapOnHandWithHolstered();
 	void OnEquipmentActorReplicated(AVremEquipmentActor* InActor);
 public:
 	DECLARE_MULTICAST_DELEGATE_OneParam(FOnEquipmentChanged, const TSubclassOf<UAnimInstance>)

@@ -7,6 +7,7 @@
 #include "GameplayTagAssetInterface.h"
 #include "GameplayTagContainer.h"
 #include "Vrem/Equipment/Weapon/VremWeaponHandlerInterface.h"
+#include "Vrem/Equipment/VremEquipmentDefinition.h"
 #include "VremCharacter.generated.h"
 
 class UHealthComponent;
@@ -92,8 +93,7 @@ protected:
 	void HandleRangeAttackInput(bool bStart = true);
 	void HandleMeleeAttackInput();
 
-	void RequestSetCurrentWeapon(int32 InSlotIndex);
-
+	void RequestSetCurrentWeapon(int32 InSlotIndex, EEquipmentState PrevOnHandDest = EEquipmentState::Stowed);
 	// ~IVremWeaponHandler Interface Begin
 	void OnWeaponFired(const FRecoilProfile& RecoilProfile);
 	virtual void OnMeleeAttackStarted(int32 ComboIndex) override;

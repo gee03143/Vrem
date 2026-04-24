@@ -321,7 +321,7 @@ void AVremCharacter::ToggleADS(const FInputActionValue& Value)
 			UE_LOG(LogVremEquipment, Log, TEXT("ToggleADS: No holstered ranged weapon to return to"));
 			return;
 		}
-		RequestSetCurrentWeapon(HolsteredIndex);
+		RequestSetCurrentWeapon(HolsteredIndex, EEquipmentState::Holstered);
 	}
 
 	if (HasStateTag(FVremGameplayTags::State_Aiming_ADS))
@@ -421,22 +421,33 @@ void AVremCharacter::OnItemInstanceCreated(UVremItemInstance* ItemInstance)
 	// server only
 	check(HasAuthority());
 
-	UE_LOG(LogVremInventory, Warning, TEXT("AVremCharacter::OnItemInstanceCreated"));
+	if (IsValid(EquipmentComponent) == false)
+	{
+		return;
+	}
 
-	const bool bHasEquipped = EquipmentComponent->GetEquipmentItemNum() > 0;
 
+	const bool bHandEmpty = EquipmentComponent->GetOnHandSlotIndex() == INDEX_NONE;
 	UItemFragment_Equipment* EquipmentFragment = ItemInstance->FindFragment<UItemFragment_Equipment>();
 	if (EquipmentFragment)
 	{
-		EquipmentComponent->TryEquipItem(
-			EquipmentFragment->GetEquipmentDefinition(),
-			EquipmentComponent->GetEquipmentItemNum() + 1
-		);
-	}
+		 const int32 EquipmentIndex = EquipmentComponent->GetEquipmentItemNum() + 1;
+		EquipmentComponent->TryEquipItem(EquipmentFragment->GetEquipmentDefinition(), EquipmentIndex); 
 
-	if (bHasEquipped == false)
-	{
-		EquipmentComponent->SetCurrentWeapon(1);
+		if (bHandEmpty)
+		{
+			EquipmentComponent->SetCurrentWeapon(1);
+		}
+		else
+		{
+			const bool bHolsterEmpty = EquipmentComponent->GetHolsteredSlotIndex() == INDEX_NONE;
+			const EEquipmentSlotType OnHandEquipmentSlot = EquipmentComponent->GetOnHandSlotType();
+			if (bHolsterEmpty && EquipmentFragment->GetEquipmentDefinition()->SlotType != OnHandEquipmentSlot)
+			{
+				EquipmentComponent->SetCurrentWeapon(EquipmentIndex, EEquipmentState::Holstered);
+				
+			}
+		}
 	}
 }
 
@@ -579,20 +590,20 @@ void AVremCharacter::HandleMeleeAttackInput()
 		const int32 HolsteredIndex = EquipmentComponent->GetHolsteredSlotIndex();
 		if (HolsteredIndex != INDEX_NONE)
 		{
-			RequestSetCurrentWeapon(HolsteredIndex);
+			RequestSetCurrentWeapon(HolsteredIndex, EEquipmentState::Holstered);
 		}
 	}
 }
 
-void AVremCharacter::RequestSetCurrentWeapon(int32 InSlotIndex)
+void AVremCharacter::RequestSetCurrentWeapon(int32 InSlotIndex, EEquipmentState PrevOnHandDest)
 {
 	if (HasAuthority())
 	{
-		EquipmentComponent->SetCurrentWeapon(InSlotIndex);
+		EquipmentComponent->SetCurrentWeapon(InSlotIndex, PrevOnHandDest);
 	}
 	else
 	{
-		EquipmentComponent->ServerSetCurrentWeapon(InSlotIndex);
+		EquipmentComponent->ServerSetCurrentWeapon(InSlotIndex, PrevOnHandDest);
 	}
 }
 

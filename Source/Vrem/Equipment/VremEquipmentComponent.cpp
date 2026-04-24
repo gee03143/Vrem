@@ -77,19 +77,7 @@ void FEquipmentList::AddEntry(const UVremEquipmentDefinition* InEquipmentDefinit
 		FEquipmentEntry& NewEntry = Entries.Emplace_GetRef();
 		NewEntry.EquipmentDefiniton = InEquipmentDefinition;
 		NewEntry.EquipmentIndex = InIndex;
-
-		const FEquipmentEntry* HolsterEntry = GetEntryFromEquipmentState(EEquipmentState::Holstered);
-		if (HolsterEntry == nullptr)
-		{
-			const FEquipmentEntry* OnHandEntry = GetEntryFromEquipmentState(EEquipmentState::OnHand);
-			if (OnHandEntry)
-			{
-				if (OnHandEntry->EquipmentDefiniton->SlotType != NewEntry.EquipmentDefiniton->SlotType)
-				{
-					NewEntry.SetAndApplyEquipmentState(EEquipmentState::Holstered);
-				}
-			}
-		}
+		NewEntry.SetAndApplyEquipmentState(EEquipmentState::Stowed);
 
 		if (OwnerComponent.IsValid())
 		{
@@ -277,7 +265,7 @@ void UVremEquipmentComponent::InitializeFromOwner()
 	EquipmentList.SetOwner(this);
 }
 
-void UVremEquipmentComponent::SetCurrentWeapon(int32 InWeaponSlotIndex)
+void UVremEquipmentComponent::SetCurrentWeapon(int32 InWeaponSlotIndex, EEquipmentState PrevOnHandDest)
 {
 	check(IsValid(GetOwner()));
 	check(GetOwner()->HasAuthority());
@@ -292,44 +280,26 @@ void UVremEquipmentComponent::SetCurrentWeapon(int32 InWeaponSlotIndex)
 		return;
 	}
 
-	// Holstered → OnHand 전환은 swap 헬퍼 사용
-	if (NewEntry->EquipmentState == EEquipmentState::Holstered)
-	{
-		SwapOnHandWithHolstered();
-		return;
-	}
-
-	// Stowed → OnHand 전환
-	const UVremEquipmentDefinition* NewDef = NewEntry->EquipmentDefiniton.Get();
-	if (NewDef == nullptr) 
-	{
-		return;
-	}
-
+	// 이전에 손에 있던 장비가 있다면, PrevOnHandDest로 밀어낸다
 	FEquipmentEntry* PrevOnHand = EquipmentList.GetEntryFromEquipmentState(EEquipmentState::OnHand);
 	if (PrevOnHand && PrevOnHand != NewEntry)
 	{
-		const UVremEquipmentDefinition* PrevDef = PrevOnHand->EquipmentDefiniton.Get();
-		const bool bSameType = PrevDef && PrevDef->SlotType == NewDef->SlotType;
-
-		if (bSameType)
+		// 손에 있던 장비가 홀스터로 밀리면, 원래 홀스터에 있던 장비는 Stowed로 밀려야 한다
+		if (PrevOnHandDest == EEquipmentState::Holstered)
 		{
-			PrevOnHand->SetAndApplyEquipmentState(EEquipmentState::Stowed);
-			EquipmentList.MarkItemDirty(*PrevOnHand);
-		}
-		else
-		{
-			FEquipmentEntry* PrevOnHolstered = EquipmentList.GetEntryFromEquipmentState(EEquipmentState::Holstered);
-			if (PrevOnHolstered)
+			FEquipmentEntry* PrevOnHolster = EquipmentList.GetEntryFromEquipmentState(EEquipmentState::Holstered);
+			if (PrevOnHolster && PrevOnHolster != NewEntry)
 			{
-				PrevOnHolstered->SetAndApplyEquipmentState(EEquipmentState::Stowed);
-				EquipmentList.MarkItemDirty(*PrevOnHolstered);
+				PrevOnHolster->SetAndApplyEquipmentState(EEquipmentState::Stowed);
+				EquipmentList.MarkItemDirty(*PrevOnHolster);
 			}
-
-			PrevOnHand->SetAndApplyEquipmentState(EEquipmentState::Holstered);
-			EquipmentList.MarkItemDirty(*PrevOnHand);
 		}
+
+		PrevOnHand->SetAndApplyEquipmentState(PrevOnHandDest);
+		EquipmentList.MarkItemDirty(*PrevOnHand);
 	}
+
+	// 새 장비를 손에 장착한다
 	NewEntry->SetAndApplyEquipmentState(EEquipmentState::OnHand);
 	EquipmentList.MarkItemDirty(*NewEntry);
 }
@@ -344,27 +314,6 @@ AVremEquipmentActor* UVremEquipmentComponent::GetCurrentEquipmentActor() const
 	}
 
 	return Entry->EquipmentActor.Get();
-}
-
-void UVremEquipmentComponent::SwapOnHandWithHolstered()
-{
-	FEquipmentEntry* HolsteredEntry = EquipmentList.GetEntryFromEquipmentState(EEquipmentState::Holstered);
-	if (HolsteredEntry == nullptr)
-	{
-		return;
-	}
-
-	FEquipmentEntry* OnHandEntry = EquipmentList.GetEntryFromEquipmentState(EEquipmentState::OnHand);
-	if (OnHandEntry)
-	{
-		// OnHand -> Holster
-		OnHandEntry->SetAndApplyEquipmentState(EEquipmentState::Holstered);
-		EquipmentList.MarkItemDirty(*OnHandEntry);
-	}
-
-	// Holster → OnHand
-	HolsteredEntry->SetAndApplyEquipmentState(EEquipmentState::OnHand);
-	EquipmentList.MarkItemDirty(*HolsteredEntry);
 }
 
 void UVremEquipmentComponent::TryEquipItem(const UVremEquipmentDefinition* ItemToEquip, int32 InSlotIndex)
@@ -413,9 +362,9 @@ void UVremEquipmentComponent::ServerTryUnequipItem_Implementation(int32 InSlotIn
 	TryUnequipItem(InSlotIndex);
 }
 
-void UVremEquipmentComponent::ServerSetCurrentWeapon_Implementation(int32 InSlotIndex)
+void UVremEquipmentComponent::ServerSetCurrentWeapon_Implementation(int32 InSlotIndex, EEquipmentState PrevOnHandDest)
 {
-	SetCurrentWeapon(InSlotIndex);
+	SetCurrentWeapon(InSlotIndex, PrevOnHandDest);
 }
 
 void UVremEquipmentComponent::OnInstanceStateChanged(EEquipmentState NewState, TSubclassOf<UAnimInstance> AnimLayerClass)
