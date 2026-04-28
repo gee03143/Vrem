@@ -41,6 +41,13 @@ protected:
     virtual void TickComponent(float DeltaTime, enum ELevelTick TickType, FActorComponentTickFunction *ThisTickFunction) override;
 
 public:
+	// Blueprint API
+    UFUNCTION(BlueprintCallable, Category="Vrem|Weapon")
+    void RequestFire();
+
+    UFUNCTION(BlueprintCallable, Category="Vrem|Weapon")
+    void RequestStopFire();
+
     void Fire();
     void StopFire();
 

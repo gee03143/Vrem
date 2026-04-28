@@ -67,12 +67,12 @@ void FInventoryList::RemoveEntry(const FPrimaryAssetId& ItemToRemove)
 			Entries[i].Count--;
 			if (Entries[i].Count <= 0)
 			{
-				const FPrimaryAssetId RemovedItemId = Entries[i].ItemId;
+				const UVremItemDefinition* ItemDef = Entries[i].ItemInstance->GetItemDefinition();
 				Entries[i].ItemInstance->OnItemRemoved();
 				Entries.RemoveAt(i);
 				MarkArrayDirty();
 
-				OwnerComponent->OnItemInstanceRemoved.Broadcast(RemovedItemId);
+				OwnerComponent->OnItemInstanceRemoved.Broadcast(ItemDef);
 			}
 			else
 			{
@@ -175,11 +175,20 @@ void FInventoryList::TestAddEntry(UVremItemDefinition* ItemDef, int32 Count)
 UVremInventoryComponent::UVremInventoryComponent()
 {
 	SetIsReplicatedByDefault(true);
+	bWantsInitializeComponent = true;
 }
 
-void UVremInventoryComponent::InitializeFromOwner()
+void UVremInventoryComponent::InitializeComponent()
 {
+	Super::InitializeComponent();
+
 	InventoryItems.SetOwner(this);
+}
+
+void UVremInventoryComponent::BeginPlay()
+{
+	Super::BeginPlay();
+
 	if (IsValid(GetOwner()) && GetOwner()->HasAuthority())
 	{
 		InitializeDefaultItems();
@@ -228,6 +237,7 @@ void UVremInventoryComponent::InitializeDefaultItems()
 
 	for (const UVremItemDefinition* Def : DefaultItemDefinitions)
 	{
+
 		AddItemToInventory(Def);
 	}
 }

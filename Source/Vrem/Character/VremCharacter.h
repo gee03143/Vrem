@@ -7,25 +7,18 @@
 #include "GameplayTagAssetInterface.h"
 #include "GameplayTagContainer.h"
 #include "Vrem/Equipment/Weapon/VremWeaponHandlerInterface.h"
-#include "Vrem/Equipment/VremEquipmentDefinition.h"
 #include "VremCharacter.generated.h"
 
-class UHealthComponent;
 class UVremGameModeDefinition;
 class USpringArmComponent;
 class UCameraComponent;
 class UVremInputConfig;
 class UVremCameraSystem;
-class UVremCameraMode;
-class UVremInventoryComponent;
-class UVremEquipmentComponent;
-class UVremWeaponComponent;
 struct FInputActionValue;
-class UVremEquipmentDefinition;
 struct FRecoilProfile;
 
-// TODO: 컴포넌트 구성은 추후 BP에서 관리하는 방향으로 리팩터링 예정.
-// 현재는 개발 편의를 위해 C++에서 모든 컴포넌트를 기본 생성.
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FStateTagChangedDelegate, const FGameplayTag&, Tag);
+
 UCLASS()
 class VREM_API AVremCharacter : public ACharacter, public IGameplayTagAssetInterface, public IVremWeaponHandler
 {
@@ -37,7 +30,6 @@ public:
 
 	virtual void BeginPlay() override;
 	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
-	virtual void PostInitializeComponents() override;
 
 	virtual void Tick(float DeltaTime) override;
 
@@ -45,6 +37,15 @@ public:
 public:	
 	// Called to bind functionality to input
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
+
+	UFUNCTION(BlueprintImplementableEvent, Category="Vrem|Input")
+	void OnAttackPressed();
+
+	UFUNCTION(BlueprintImplementableEvent, Category="Vrem|Input")
+	void OnAttackReleased();
+
+	UFUNCTION(BlueprintImplementableEvent, Category="Vrem|Input")
+	void OnToggleADSPressed();
 protected:
 	void OnInputConfigLoaded(const UVremGameModeDefinition* InGameModeDefinition);
 	
@@ -72,12 +73,6 @@ protected:
 	
 	UPROPERTY(EditAnywhere, BlueprintReadOnly)
 	TObjectPtr<UVremCameraSystem> CameraSystem;
-
-	UPROPERTY(EditDefaultsOnly)
-	TObjectPtr<UVremCameraMode> DefaultCameraMode;
-
-	UPROPERTY(EditDefaultsOnly)
-	TObjectPtr<UVremCameraMode> ADSCameraMode;
 #pragma endregion
 
 #pragma region weaponsystem
@@ -85,30 +80,12 @@ public:
 	float GetCurrentSpreadForUI() const;
 
 protected:
-	void OnItemInstanceCreated(class UVremItemInstance* ItemInstance);
-	void OnItemInstanceRemoved(const FPrimaryAssetId& ItemId);
-	void OnEquipmentActorAttached(const TSubclassOf<UAnimInstance> InAnimLayerClass);
-	void OnEquipmentActorDetached(const TSubclassOf<UAnimInstance> InAnimLayerClass);
-
-	void HandleRangeAttackInput(bool bStart = true);
-	void HandleMeleeAttackInput();
-
-	void RequestSetCurrentWeapon(int32 InSlotIndex, EEquipmentState PrevOnHandDest = EEquipmentState::Stowed);
 	// ~IVremWeaponHandler Interface Begin
 	void OnWeaponFired(const FRecoilProfile& RecoilProfile);
 	virtual void OnMeleeAttackStarted(int32 ComboIndex) override;
 	virtual void OnMeleeAttackFinished() override;
 	// ~IVremWeaponHandler Interface End
-protected:
-	UPROPERTY(EditAnywhere, BlueprintReadOnly)
-	TObjectPtr<UVremInventoryComponent> InventoryComponent;
-
-	UPROPERTY(EditAnywhere, BlueprintReadOnly)
-	TObjectPtr<UVremEquipmentComponent> EquipmentComponent;
 #pragma endregion weaponsystem
-
-	UPROPERTY(EditAnywhere, BlueprintReadOnly)
-	TObjectPtr<UHealthComponent> HealthComponent;
 private:
 	FDelegateHandle GameModeDefinitionLoadedHandle;
 
@@ -126,21 +103,38 @@ public:
 		return StateTags.HasTag(Tag);
 	}
 
+public:
+	UPROPERTY(BlueprintAssignable, Category="Vrem|Tag")
+    FStateTagChangedDelegate OnStateTagAdded;
+
+    UPROPERTY(BlueprintAssignable, Category="Vrem|Tag")
+    FStateTagChangedDelegate OnStateTagRemoved;
+
+public:
+	UFUNCTION(BlueprintCallable, Category="Vrem|Combat")
+	void EnterMeleeAttackingState();
+
+	UFUNCTION(BlueprintCallable, Category="Vrem|Combat")
+	void ExitMeleeAttackingState();
+
+	UFUNCTION(BlueprintCallable, Category="Vrem|Aiming")
+	void EnterADSState();
+
+	UFUNCTION(BlueprintCallable, Category="Vrem|Aiming")
+	void ExitADSState();
+
+	UFUNCTION(BlueprintCallable, Category="Vrem|Aiming")
+	void EnterScopedState();
+
+	UFUNCTION(BlueprintCallable, Category="Vrem|Aiming")
+	void ExitScopedState();
+
 private:
 	void UpdateMovementStateTags();
 
 	// 상태 변경은 내부나 테스트 클래스에서만
-
-	void AddStateTag(const FGameplayTag& Tag)
-	{
-		StateTags.AddTag(Tag);
-	}
-
-	void RemoveStateTag(const FGameplayTag& Tag)
-	{
-		StateTags.RemoveTag(Tag);
-	}
-
+	void AddStateTag(const FGameplayTag& Tag);
+	void RemoveStateTag(const FGameplayTag& Tag);
 private:
 	FGameplayTagContainer StateTags;
 #pragma endregion gameplaytag

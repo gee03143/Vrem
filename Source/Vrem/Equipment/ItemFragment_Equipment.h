@@ -12,6 +12,10 @@ class UItemFragment_Equipment : public UItemFragment
     GENERATED_BODY()
 
 public:
+	UFUNCTION(BlueprintPure, Category = "Vrem|Equipment")
+	EEquipmentSlotType GetSlotType() const;
+
+	UFUNCTION(BlueprintPure, Category = "Vrem|Equipment")
 	const UVremEquipmentDefinition* GetEquipmentDefinition() const;
 
 protected:

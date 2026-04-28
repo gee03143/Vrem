@@ -3,6 +3,7 @@
 
 #include "VremEquipmentComponent.h"
 #include "VremEquipmentActor.h"
+#include "ItemFragment_Equipment.h"
 #include "Net/UnrealNetwork.h"
 #include "Vrem/VremLogChannels.h"
 #include "UObject/TopLevelAssetPath.h"
@@ -62,6 +63,12 @@ void FEquipmentList::SetOwner(UVremEquipmentComponent* InOwner)
 
 void FEquipmentList::AddEntry(const UVremEquipmentDefinition* InEquipmentDefinition, int32 InIndex)
 {
+	if (OwnerComponent.IsValid() == false)
+	{
+		UE_LOG(LogVremEquipment, Warning, TEXT("FEquipmentList::AddEntry: OwnerComponent is not valid"));
+		return;
+	}
+
 	// server only
 	check(IsValid(OwnerComponent->GetOwner()));
 	check(OwnerComponent->GetOwner()->HasAuthority());
@@ -253,6 +260,7 @@ void FEquipmentList::TryBindEquipmentActor(AVremEquipmentActor* InActor)
 UVremEquipmentComponent::UVremEquipmentComponent()
 {
 	SetIsReplicatedByDefault(true);
+	bWantsInitializeComponent = true;
 }
 
 void UVremEquipmentComponent::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
@@ -260,9 +268,78 @@ void UVremEquipmentComponent::GetLifetimeReplicatedProps(TArray<FLifetimePropert
 	DOREPLIFETIME(UVremEquipmentComponent, EquipmentList);
 }
 
-void UVremEquipmentComponent::InitializeFromOwner()
+void UVremEquipmentComponent::InitializeComponent()
 {
+	Super::InitializeComponent();
+
 	EquipmentList.SetOwner(this);
+}
+
+void UVremEquipmentComponent::RequestSetCurrentWeapon(int32 InSlotIndex, EEquipmentState PrevOnHandDest /*= EEquipmentState::Stowed*/)
+{
+	if (IsValid(GetOwner()) && GetOwner()->HasAuthority())
+	{
+		SetCurrentWeapon(InSlotIndex, PrevOnHandDest);
+	}
+	else
+	{
+		ServerSetCurrentWeapon(InSlotIndex, PrevOnHandDest);
+	}
+}
+
+void UVremEquipmentComponent::RequestEquipItemByInstance(const UVremItemInstance* ItemToEquip, int32 InSlotIndex)
+{
+	if (IsValid(ItemToEquip) == false)
+	{
+		return;
+	}
+
+	UItemFragment_Equipment* EquipmentFragment = ItemToEquip->FindFragment<UItemFragment_Equipment>();
+	if (EquipmentFragment)
+	{
+		RequestEquipItemByDefinition(EquipmentFragment->GetEquipmentDefinition(), InSlotIndex);
+	}
+}
+
+void UVremEquipmentComponent::RequestEquipItemByDefinition(const UVremEquipmentDefinition* ItemToEquip, int32 InSlotIndex)
+{
+	if (IsValid(ItemToEquip) == false)
+	{
+		return;
+	}
+
+	if (IsValid(GetOwner()) && GetOwner()->HasAuthority())
+	{
+		TryEquipItem(ItemToEquip, InSlotIndex);
+	}
+	else
+	{
+		ServerTryEquipItem(ItemToEquip, InSlotIndex);
+	}
+}
+
+void UVremEquipmentComponent::RequestUnequipItemBySlot(int32 InSlotIndex)
+{
+	if (IsValid(GetOwner()) && GetOwner()->HasAuthority())
+	{
+		TryUnequipItem(InSlotIndex);
+	}
+	else
+	{
+		ServerTryUnequipItem(InSlotIndex);
+	}
+}
+
+void UVremEquipmentComponent::RequestUnequipItemByDefinition(const UVremEquipmentDefinition* InEquipmentDefinition)
+{
+	if (IsValid(GetOwner()) && GetOwner()->HasAuthority())
+	{
+		TryUnequipItem(InEquipmentDefinition);
+	}
+	else
+	{
+		ServerTryUnequipItem(EquipmentList.FindIndexByDefinition(InEquipmentDefinition));
+	}
 }
 
 void UVremEquipmentComponent::SetCurrentWeapon(int32 InWeaponSlotIndex, EEquipmentState PrevOnHandDest)
@@ -372,18 +449,18 @@ void UVremEquipmentComponent::OnInstanceStateChanged(EEquipmentState NewState, T
 	switch (NewState)
 	{
 	case EEquipmentState::OnHand:
-		OnEquipmenntAttached.Broadcast(AnimLayerClass);
+		OnEquipmentAttached.Broadcast(AnimLayerClass);
 		break;
 	case EEquipmentState::Holstered:
 	case EEquipmentState::Stowed:
-		OnEquipmenntDetached.Broadcast(AnimLayerClass);
+		OnEquipmentDetached.Broadcast(AnimLayerClass);
 		break;
 	}
 }
 
 void UVremEquipmentComponent::OnInstanceDestroyed(TSubclassOf<UAnimInstance> AnimLayerClass)
 {
-	OnEquipmenntDetached.Broadcast(AnimLayerClass);
+	OnEquipmentDetached.Broadcast(AnimLayerClass);
 }
 
 void UVremEquipmentComponent::OnRep_EquipmentList()

@@ -34,8 +34,10 @@ void UHealthComponent::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& Out
 	DOREPLIFETIME(UHealthComponent, Health);
 }
 
-void UHealthComponent::InitializeFromOwner()
+void UHealthComponent::InitializeComponent()
 {
+	Super::InitializeComponent();
+
 	if (IsValid(GetOwner()))
 	{
 		GetOwner()->OnTakePointDamage.AddDynamic(this, &ThisClass::OnTakePointDamageHandle);

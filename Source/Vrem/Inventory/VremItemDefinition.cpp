@@ -13,6 +13,24 @@ void UItemFragment_Dummy::OnItemCreated(class UVremItemInstance* Instance)
 	UE_LOG(LogVremInventory, Warning, TEXT("param1 : [%d] param2 : [%d]\nNetMode : %s"), Param1, Param2, *GetNetModeString(GetWorld()));
 }
 
+
+// =======================================
+// UVremItemDefinition
+// =======================================
+UItemFragment* UVremItemDefinition::FindFragmentByClass(TSubclassOf<UItemFragment> FragmentClass) const
+{
+	for (UItemFragment* Fragment : Fragments)
+	{
+		if (Fragment->IsA(FragmentClass))
+		{
+			return Fragment;
+		}
+	}
+
+	return nullptr;
+}
+
+
 // =======================================
 // UVremItemInstance
 // =======================================
@@ -44,4 +62,14 @@ void UVremItemInstance::OnItemRemoved()
 			Fragment->OnItemRemoved(this);
 		}
 	}
+}
+
+const UVremItemDefinition* UVremItemInstance::GetItemDefinition() const
+{
+	return ItemDef;
+}
+
+UItemFragment* UVremItemInstance::FindFragmentByClass(TSubclassOf<UItemFragment> FragmentClass) const
+{
+	return IsValid(ItemDef) ? ItemDef->FindFragmentByClass(FragmentClass) : nullptr;
 }

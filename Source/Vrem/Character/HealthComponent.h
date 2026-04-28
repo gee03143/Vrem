@@ -20,7 +20,8 @@ public:
 	virtual void OnUnregister() override;
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 
-	void InitializeFromOwner();
+	virtual void InitializeComponent() override;
+
 	void Cleanup();
 
 protected:

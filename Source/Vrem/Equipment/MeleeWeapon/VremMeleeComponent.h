@@ -17,7 +17,8 @@ class VREM_API UVremMeleeComponent : public UActorComponent
 public:
     UVremMeleeComponent();
 
-    // 외부(Character) 진입점
+    // Blueprint API
+    UFUNCTION(BlueprintCallable, Category="Vrem|MeleeWeapon")
     void TryMeleeAttack();
 
 protected:

@@ -2,23 +2,3 @@
 
 
 #include "VremAnimInstance.h"
-
-void UVremAnimInstance::SetWeaponAnimLayer(const TSubclassOf<UAnimInstance> NewLayer)
-{
-    if (CurrentLayer == NewLayer)
-    {
-        return;
-    }
-
-    if (CurrentLayer)
-    {
-        UnlinkAnimClassLayers(CurrentLayer);
-    }
-
-    if (NewLayer)
-    {
-        LinkAnimClassLayers(NewLayer);
-    }
-
-    CurrentLayer = NewLayer;
-}

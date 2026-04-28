@@ -16,8 +16,6 @@ class VREM_API UVremAnimInstance : public UAnimInstance
 	
 
 public:
-	void SetWeaponAnimLayer(const TSubclassOf<UAnimInstance> NewLayer);
-
 	TSubclassOf<UAnimInstance> GetCurrentLayer() const { return CurrentLayer; }
 
 protected:

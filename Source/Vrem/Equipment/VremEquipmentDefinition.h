@@ -11,7 +11,7 @@
 class UVremEquipmentDefinition;
 class AVremEquipmentActor;
 
-UENUM()
+UENUM(BlueprintType)
 enum class EEquipmentState : uint8
 {
 	OnHand,      // 손에 들고 사용 중

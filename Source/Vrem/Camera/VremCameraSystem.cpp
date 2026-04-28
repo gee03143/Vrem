@@ -9,6 +9,11 @@ UVremCameraSystem::UVremCameraSystem()
 	PrimaryComponentTick.bCanEverTick = false;
 }
 
+void UVremCameraSystem::RequestSetCameraMode(UVremCameraMode* InVremCameraMode)
+{
+	SetTargetCameraMode(InVremCameraMode);
+}
+
 FVremCameraState UVremCameraSystem::GetBlendedCameraState()
 {
 	const float DeltaTime = GetWorld()->GetDeltaSeconds();

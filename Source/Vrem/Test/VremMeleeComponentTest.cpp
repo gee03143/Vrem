@@ -2,6 +2,7 @@
 
 #if WITH_AUTOMATION_WORKER
 
+#include "VremMeleeComponentTest.h"
 #include "VremTest.h"
 #include "VremTestTagPawn.h"
 #include "GameFramework/Actor.h"

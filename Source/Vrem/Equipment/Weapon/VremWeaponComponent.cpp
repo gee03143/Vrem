@@ -49,6 +49,16 @@ void UVremWeaponComponent::TickComponent(float DeltaTime, enum ELevelTick TickTy
     }
 }
 
+void UVremWeaponComponent::RequestFire()
+{
+    Fire();
+}
+
+void UVremWeaponComponent::RequestStopFire()
+{
+    StopFire();
+}
+
 void UVremWeaponComponent::Fire()
 {
     if (IsValid(WeaponDefinition) == false)

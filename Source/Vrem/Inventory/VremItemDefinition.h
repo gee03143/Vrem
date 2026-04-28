@@ -46,6 +46,9 @@ public:
     UPROPERTY(EditDefaultsOnly, Instanced)
     TArray<UItemFragment*> Fragments;
 
+	UFUNCTION(BlueprintCallable, BlueprintPure, Category="Vrem|Item", meta=(DeterminesOutputType="FragmentClass"))
+	UItemFragment* FindFragmentByClass(TSubclassOf<UItemFragment> FragmentClass) const;
+
 	template<typename T>
 	T* FindFragment() const;
 };
@@ -63,7 +66,7 @@ T* UVremItemDefinition::FindFragment() const
 	return nullptr;
 }
 
-UCLASS()
+UCLASS(BlueprintType)
 class VREM_API UVremItemInstance : public UObject
 {
 	GENERATED_BODY()
@@ -75,6 +78,10 @@ public:
     template<typename T>
     T* FindFragment() const;
 
+	const UVremItemDefinition* GetItemDefinition() const;
+
+	UFUNCTION(BlueprintCallable, BlueprintPure, Category="Vrem|Item", meta=(DeterminesOutputType="FragmentClass"))
+	UItemFragment* FindFragmentByClass(TSubclassOf<UItemFragment> FragmentClass) const;
 protected:
     UPROPERTY()
     UVremItemDefinition* ItemDef;
@@ -83,12 +90,5 @@ protected:
 template<typename T>
 T* UVremItemInstance::FindFragment() const
 {
-	for (UItemFragment* Fragment : ItemDef->Fragments)
-	{
-		if (T* Typed = Cast<T>(Fragment))
-		{
-			return Typed;
-		}
-	}
-	return nullptr;
+	return IsValid(ItemDef) ? ItemDef->FindFragment<T>() : nullptr;
 }

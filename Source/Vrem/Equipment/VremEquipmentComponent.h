@@ -12,6 +12,9 @@
 class UVremEquipmentComponent;
 class AVremEquipmentActor;
 
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnEquipmentChanged, TSubclassOf<UAnimInstance>, AnimLayerClass);
+
+
 USTRUCT()
 struct FEquipmentEntry : public FFastArraySerializerItem
 {
@@ -153,19 +156,43 @@ public:
 
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 
-	void InitializeFromOwner();
+	virtual void InitializeComponent() override;
+
+public:
+	// Blueprint API
+    UFUNCTION(BlueprintCallable, Category="Vrem|Equipment")
+    void RequestSetCurrentWeapon(int32 InSlotIndex, EEquipmentState PrevOnHandDest = EEquipmentState::Stowed);
+
+	UFUNCTION(BlueprintCallable, Category="Vrem|Equipment")
+    void RequestEquipItemByInstance(const UVremItemInstance* ItemToEquip, int32 InSlotIndex);
+
+    UFUNCTION(BlueprintCallable, Category="Vrem|Equipment")
+    void RequestEquipItemByDefinition(const UVremEquipmentDefinition* ItemToEquip, int32 InSlotIndex);
+
+    UFUNCTION(BlueprintCallable, Category="Vrem|Equipment")
+    void RequestUnequipItemBySlot(int32 InSlotIndex);
+
+    UFUNCTION(BlueprintCallable, Category="Vrem|Equipment")
+    void RequestUnequipItemByDefinition(const UVremEquipmentDefinition* InEquipmentDefinition);
+
+	//query
+	UFUNCTION(BlueprintPure, Category="Vrem|Equipment")
+	int32 GetEquipmentItemNum() const { return EquipmentList.GetNumEntries(); }
+	UFUNCTION(BlueprintPure, Category="Vrem|Equipment")
+	AVremEquipmentActor* GetCurrentEquipmentActor() const;
+	UFUNCTION(BlueprintPure, Category="Vrem|Equipment")
+	int32 GetOnHandSlotIndex() const;
+	UFUNCTION(BlueprintPure, Category="Vrem|Equipment")
+	int32 GetHolsteredSlotIndex() const;
+	UFUNCTION(BlueprintPure, Category="Vrem|Equipment")
+	EEquipmentSlotType GetOnHandSlotType() const;
 public:
 	void SetCurrentWeapon(int32 InWeaponSlotIndex, EEquipmentState PrevOnHandDest = EEquipmentState::Stowed);
 	void TryEquipItem(const UVremEquipmentDefinition* ItemToEquip, int32 InSlotIndex);
 	void TryUnequipItem(int32 InSlotIndex);
 	void TryUnequipItem(const UVremEquipmentDefinition* InEquipmentDefinition);
 
-	int32 GetEquipmentItemNum() const { return EquipmentList.GetNumEntries(); }
 	FString GetEquipmentListString() const { return EquipmentList.ToString(); }
-	AVremEquipmentActor* GetCurrentEquipmentActor() const;
-	int32 GetOnHandSlotIndex() const;
-	int32 GetHolsteredSlotIndex() const;
-	EEquipmentSlotType GetOnHandSlotType() const;
 
 public:
 	UFUNCTION(Server, Reliable)
@@ -182,13 +209,11 @@ protected:
 	void OnInstanceDestroyed(TSubclassOf<UAnimInstance> AnimLayerClass);
 	void OnEquipmentActorReplicated(AVremEquipmentActor* InActor);
 public:
-	DECLARE_MULTICAST_DELEGATE_OneParam(FOnEquipmentChanged, const TSubclassOf<UAnimInstance>)
-	FOnEquipmentChanged OnEquipmenntAttached;
-	FOnEquipmentChanged OnEquipmenntDetached;
+	UPROPERTY(BlueprintAssignable)
+	FOnEquipmentChanged OnEquipmentAttached;
 
-	DECLARE_MULTICAST_DELEGATE_OneParam(FOnSlotOccupantChanged, AVremEquipmentActor* /*NewActor, nullable*/)
-	FOnSlotOccupantChanged OnRangedSlotChanged;
-	FOnSlotOccupantChanged OnMeleeSlotChanged;
+	UPROPERTY(BlueprintAssignable)
+	FOnEquipmentChanged OnEquipmentDetached;
 
 protected:
 	UFUNCTION()

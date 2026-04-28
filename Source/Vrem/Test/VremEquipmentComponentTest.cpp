@@ -43,7 +43,6 @@ bool FEquipmentTryEquipItemTest::RunTest(const FString& Parameters)
     UWorld* World = VremTestHelper::CreateTestWorld();
     AActor* Actor = VremEquipmentTestHelper::CreateActorWithEquipment(World);
     UVremEquipmentComponent* EquipComp = Actor->FindComponentByClass<UVremEquipmentComponent>();
-    EquipComp->InitializeFromOwner();
 
     UVremEquipmentDefinition* Def = VremEquipmentTestHelper::CreateTestDefinition();
 
@@ -85,7 +84,6 @@ bool FEquipmentTryUnequipItemTest::RunTest(const FString& Parameters)
     UWorld* World = VremTestHelper::CreateTestWorld();
     AActor* Actor = VremEquipmentTestHelper::CreateActorWithEquipment(World);
     UVremEquipmentComponent* EquipComp = Actor->FindComponentByClass<UVremEquipmentComponent>();
-    EquipComp->InitializeFromOwner();
 
     // 빈 상태에서 교체 시도 -> 크래시 없어야 함
     EquipComp->SetCurrentWeapon(99);
@@ -122,7 +120,6 @@ bool FEquipmentSlotQueryTest::RunTest(const FString& Parameters)
     UWorld* World = VremTestHelper::CreateTestWorld();
     AActor* Actor = VremEquipmentTestHelper::CreateActorWithEquipment(World);
     UVremEquipmentComponent* EquipComp = Actor->FindComponentByClass<UVremEquipmentComponent>();
-    EquipComp->InitializeFromOwner();
 
     // 빈 상태
     TestEqual(TEXT("Empty: No OnHand"), EquipComp->GetOnHandSlotIndex(), INDEX_NONE);
@@ -166,36 +163,34 @@ bool FEquipmentSetCurrentWeaponTest::RunTest(const FString& Parameters)
     UWorld* World = VremTestHelper::CreateTestWorld();
     AActor* Actor = VremEquipmentTestHelper::CreateActorWithEquipment(World);
     UVremEquipmentComponent* EquipComp = Actor->FindComponentByClass<UVremEquipmentComponent>();
-    EquipComp->InitializeFromOwner();
 
     UVremEquipmentDefinition* Rifle = VremEquipmentTestHelper::CreateTestDefinition();
     UVremEquipmentDefinition* Pistol = VremEquipmentTestHelper::CreateTestDefinition();
 
-    int32 AttachedCount = 0;
-    int32 DetachedCount = 0;
-    EquipComp->OnEquipmenntAttached.AddLambda([&AttachedCount](const TSubclassOf<UAnimInstance>) { AttachedCount++; });
-    EquipComp->OnEquipmenntDetached.AddLambda([&DetachedCount](const TSubclassOf<UAnimInstance>) { DetachedCount++; });
+    UVremEquipmentTestListener* Listener = NewObject<UVremEquipmentTestListener>(EquipComp);
+    EquipComp->OnEquipmentAttached.AddDynamic(Listener, &UVremEquipmentTestListener::HandleAttached);
+    EquipComp->OnEquipmentDetached.AddDynamic(Listener, &UVremEquipmentTestListener::HandleDetached);
 
     // 장착 -> Stowed 상태이므로 Detached 발생
     EquipComp->TryEquipItem(Rifle, 1);
-    TestEqual(TEXT("Detached should fire on initial equip (Stowed)"), DetachedCount, 1);
+    TestEqual(TEXT("Detached should fire on initial equip (Stowed)"), Listener->DetachedCount, 1);
     TestEqual(TEXT("Slot 1 should be Stowed"), EquipComp->GetEquipmentStateAtSlot(1), EEquipmentState::Stowed);
 
     // 슬롯 1을 현재 무기로 설정
     EquipComp->SetCurrentWeapon(1);
-    TestEqual(TEXT("Attached should fire on SetCurrentWeapon"), AttachedCount, 1);
+    TestEqual(TEXT("Attached should fire on SetCurrentWeapon"), Listener->AttachedCount, 1);
     TestEqual(TEXT("Slot 1 should be OnHand"), EquipComp->GetEquipmentStateAtSlot(1), EEquipmentState::OnHand);
 
     EquipComp->TryEquipItem(Pistol, 2);
-    TestEqual(TEXT("Detached should fire on initial equip (Stowed)"), DetachedCount, 2);
+    TestEqual(TEXT("Detached should fire on initial equip (Stowed)"), Listener->DetachedCount, 2);
     TestEqual(TEXT("Slot 2 should be Stowed"), EquipComp->GetEquipmentStateAtSlot(2), EEquipmentState::Stowed);
     
     // 다른 슬롯으로 교체 -> 이전 무기 Detached
     EquipComp->SetCurrentWeapon(2);
     TestEqual(TEXT("Slot 1 should be Stowed"), EquipComp->GetEquipmentStateAtSlot(1), EEquipmentState::Stowed);
     TestEqual(TEXT("Slot 2 should be OnHand"), EquipComp->GetEquipmentStateAtSlot(2), EEquipmentState::OnHand);
-    TestEqual(TEXT("Detached should fire for previous weapon"), DetachedCount, 3);
-    TestEqual(TEXT("Attached should fire for new weapon"), AttachedCount, 2);
+    TestEqual(TEXT("Detached should fire for previous weapon"), Listener->DetachedCount, 3);
+    TestEqual(TEXT("Attached should fire for new weapon"), Listener->AttachedCount, 2);
 
     // 장비 수는 변하지 않아야 함
     TestEqual(TEXT("Equipment count should remain 2"), EquipComp->GetEquipmentItemNum(), 2);
@@ -218,7 +213,6 @@ bool FEquipmentUnequipByDefinitionTest::RunTest(const FString& Parameters)
     UWorld* World = VremTestHelper::CreateTestWorld();
     AActor* Actor = VremEquipmentTestHelper::CreateActorWithEquipment(World);
     UVremEquipmentComponent* EquipComp = Actor->FindComponentByClass<UVremEquipmentComponent>();
-    EquipComp->InitializeFromOwner();
 
     UVremEquipmentDefinition* Def = VremEquipmentTestHelper::CreateTestDefinition();
     EquipComp->TryEquipItem(Def, 1);
@@ -247,12 +241,10 @@ bool FEquipmentReplicationSimTest::RunTest(const FString& Parameters)
     // 서버 액터 + 컴포넌트
     AActor* ServerActor = VremEquipmentTestHelper::CreateActorWithEquipment(World);
     UVremEquipmentComponent* ServerComp = ServerActor->FindComponentByClass<UVremEquipmentComponent>();
-    ServerComp->InitializeFromOwner();
 
     // 클라이언트 액터 + 컴포넌트 (같은 월드지만 별도 컴포넌트로 시뮬레이션)
     AActor* ClientActor = VremEquipmentTestHelper::CreateActorWithEquipment(World);
     UVremEquipmentComponent* ClientComp = ClientActor->FindComponentByClass<UVremEquipmentComponent>();
-    ClientComp->InitializeFromOwner();
 
     UVremEquipmentDefinition* Def = VremEquipmentTestHelper::CreateTestDefinition();
 
@@ -287,7 +279,6 @@ bool FEquipmentSetCurrentWeaponHolsteredDestTest::RunTest(const FString& Paramet
     UWorld* World = VremTestHelper::CreateTestWorld();
     AActor* Actor = VremEquipmentTestHelper::CreateActorWithEquipment(World);
     UVremEquipmentComponent* EquipComp = Actor->FindComponentByClass<UVremEquipmentComponent>();
-    EquipComp->InitializeFromOwner();
 
     UVremEquipmentDefinition* Rifle = VremEquipmentTestHelper::CreateTestDefinition();
     UVremEquipmentDefinition* Knife = VremEquipmentTestHelper::CreateTestDefinition();
@@ -322,7 +313,6 @@ bool FEquipmentHolsteredDemotionTest::RunTest(const FString& Parameters)
     UWorld* World = VremTestHelper::CreateTestWorld();
     AActor* Actor = VremEquipmentTestHelper::CreateActorWithEquipment(World);
     UVremEquipmentComponent* EquipComp = Actor->FindComponentByClass<UVremEquipmentComponent>();
-    EquipComp->InitializeFromOwner();
 
     UVremEquipmentDefinition* A = VremEquipmentTestHelper::CreateTestDefinition();
     UVremEquipmentDefinition* B = VremEquipmentTestHelper::CreateTestDefinition();
@@ -364,7 +354,6 @@ bool FEquipmentSwapHolsteredToOnHandTest::RunTest(const FString& Parameters)
     UWorld* World = VremTestHelper::CreateTestWorld();
     AActor* Actor = VremEquipmentTestHelper::CreateActorWithEquipment(World);
     UVremEquipmentComponent* EquipComp = Actor->FindComponentByClass<UVremEquipmentComponent>();
-    EquipComp->InitializeFromOwner();
 
     UVremEquipmentDefinition* A = VremEquipmentTestHelper::CreateTestDefinition();
     UVremEquipmentDefinition* B = VremEquipmentTestHelper::CreateTestDefinition();

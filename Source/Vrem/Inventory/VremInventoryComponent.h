@@ -12,6 +12,9 @@ class UVremItemDefinition;
 class UVremItemInstance;
 class UVremInventoryComponent;
 
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnItemInstanceCreated, UVremItemInstance*, ItemInstance);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnItemInstanceRemoved, const UVremItemDefinition*, ItemDefinition);
+
 USTRUCT()
 struct FInventoryEntry : public FFastArraySerializerItem
 {
@@ -23,7 +26,8 @@ struct FInventoryEntry : public FFastArraySerializerItem
     UPROPERTY()
     int32 Count = 0;
 
-	UVremItemInstance* ItemInstance;
+	UPROPERTY(NotReplicated, Transient)
+	UVremItemInstance* ItemInstance = nullptr;
 
 	FString ToString() const
 	{
@@ -113,7 +117,8 @@ public:
 	// Sets default values for this component's properties
 	UVremInventoryComponent();
 
-	void InitializeFromOwner();
+	virtual void InitializeComponent() override;
+	virtual void BeginPlay() override;
 
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 
@@ -134,13 +139,17 @@ protected:
 	void OnRep_InventoryItems();
 
 public:
-	DECLARE_MULTICAST_DELEGATE(FOnInventoryChanged);
+	DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnInventoryChanged);
+
+	UPROPERTY(BlueprintAssignable, Category="Vrem|Inventory")
 	FOnInventoryChanged OnInventoryChanged;
 
-	DECLARE_MULTICAST_DELEGATE_OneParam(FOnItemInstanceCreated, UVremItemInstance* /*ItemInstance*/)
+
+	UPROPERTY(BlueprintAssignable, Category="Vrem|Inventory")
 	FOnItemInstanceCreated OnItemInstanceCreated;
 
-	DECLARE_MULTICAST_DELEGATE_OneParam(FOnItemInstanceRemoved, const FPrimaryAssetId& /*ItemId*/)
+
+	UPROPERTY(BlueprintAssignable, Category="Vrem|Inventory")
 	FOnItemInstanceRemoved OnItemInstanceRemoved;
 
 protected:

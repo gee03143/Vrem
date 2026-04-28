@@ -6,7 +6,6 @@
 #include "Misc/AutomationTest.h"
 #include "VremTest.h"
 #include "Vrem/Inventory/VremInventoryComponent.h"
-#include "Vrem/Inventory/VremItemDefinition.h"
 
 namespace VremInventoryTestHelper
 {
@@ -26,7 +25,7 @@ namespace VremInventoryTestHelper
 }
 
 // ============================================
-// ¾ÆÀÌÅÛ Ãß°¡ Å×½ºÆ®
+// ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ß°ï¿½ ï¿½×½ï¿½Æ®
 // ============================================
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(
     FInventoryAddItemTest,
@@ -39,14 +38,13 @@ bool FInventoryAddItemTest::RunTest(const FString& Parameters)
     UWorld* World = VremTestHelper::CreateTestWorld();
     AActor* Actor = VremInventoryTestHelper::CreateActorWithInventory(World);
     UVremInventoryComponent* InvComp = Actor->FindComponentByClass<UVremInventoryComponent>();
-    InvComp->InitializeFromOwner();
 
     UVremItemDefinition* ItemDef = VremInventoryTestHelper::CreateTestItemDefinition();
 
-    // Ãß°¡ Àü
+    // ï¿½ß°ï¿½ ï¿½ï¿½
     TestEqual(TEXT("Initial item count should be 0"), InvComp->GetInventoryItemNum(), 0);
 
-    // ¾ÆÀÌÅÛ Ãß°¡
+    // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ß°ï¿½
     InvComp->TestAddItem(ItemDef);
     TestEqual(TEXT("Item count should be 1"), InvComp->GetInventoryItemNum(), 1);
 
@@ -55,7 +53,7 @@ bool FInventoryAddItemTest::RunTest(const FString& Parameters)
 }
 
 // ============================================
-// µ¿ÀÏ ¾ÆÀÌÅÛ ½ºÅÃ Å×½ºÆ®
+// ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½×½ï¿½Æ®
 // ============================================
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(
     FInventoryStackItemTest,
@@ -68,14 +66,13 @@ bool FInventoryStackItemTest::RunTest(const FString& Parameters)
     UWorld* World = VremTestHelper::CreateTestWorld();
     AActor* Actor = VremInventoryTestHelper::CreateActorWithInventory(World);
     UVremInventoryComponent* InvComp = Actor->FindComponentByClass<UVremInventoryComponent>();
-    InvComp->InitializeFromOwner();
 
     UVremItemDefinition* ItemDef = VremInventoryTestHelper::CreateTestItemDefinition();
 
     InvComp->TestAddItem(ItemDef);
     InvComp->TestAddItem(ItemDef);
 
-    // °°Àº ¾ÆÀÌÅÛÀÌ¸é Entry´Â 1°³, Count°¡ 2
+    // ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ì¸ï¿½ Entryï¿½ï¿½ 1ï¿½ï¿½, Countï¿½ï¿½ 2
     TestEqual(TEXT("Entry count should be 1"), InvComp->GetInventoryItemNum(), 1);
 
     VremTestHelper::DestroyTestWorld(World);
@@ -83,7 +80,7 @@ bool FInventoryStackItemTest::RunTest(const FString& Parameters)
 }
 
 // ============================================
-// ¾ÆÀÌÅÛ Á¦°Å Å×½ºÆ®
+// ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½×½ï¿½Æ®
 // ============================================
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(
     FInventoryRemoveItemTest,
@@ -96,9 +93,8 @@ bool FInventoryRemoveItemTest::RunTest(const FString& Parameters)
     UWorld* World = VremTestHelper::CreateTestWorld();
     AActor* Actor = VremInventoryTestHelper::CreateActorWithInventory(World);
     UVremInventoryComponent* InvComp = Actor->FindComponentByClass<UVremInventoryComponent>();
-    InvComp->InitializeFromOwner();
 
-    // ºó ÀÎº¥Åä¸®¿¡¼­ Á¦°Å ½Ãµµ -> Å©·¡½Ã ¾ø¾î¾ß ÇÔ
+    // ï¿½ï¿½ ï¿½Îºï¿½ï¿½ä¸®ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½Ãµï¿½ -> Å©ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½
     FPrimaryAssetId FakeId(TEXT("VremItemDefinition"), TEXT("FakeItem"));
     InvComp->TestRemoveItem(FakeId);
     TestEqual(TEXT("Count should remain 0"), InvComp->GetInventoryItemNum(), 0);
@@ -108,7 +104,7 @@ bool FInventoryRemoveItemTest::RunTest(const FString& Parameters)
     InvComp->TestAddItem(ItemDef, 3);
     TestEqual(TEXT("Entry count should be 1"), InvComp->GetInventoryItemNum(), 1);
 
-    // Count 3 -> 2 -> 1 -> 0 (Á¦°Å)
+    // Count 3 -> 2 -> 1 -> 0 (ï¿½ï¿½ï¿½ï¿½)
     InvComp->TestRemoveItem(ItemDef->GetPrimaryAssetId());
     TestEqual(TEXT("Entry should still exist at count 2"), InvComp->GetInventoryItemNum(), 1);
 
@@ -121,7 +117,7 @@ bool FInventoryRemoveItemTest::RunTest(const FString& Parameters)
 }
 
 // ============================================
-// µ¨¸®°ÔÀÌÆ® È£Ãâ Å×½ºÆ®
+// ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Æ® È£ï¿½ï¿½ ï¿½×½ï¿½Æ®
 // ============================================
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(
     FInventoryDelegateTest,
@@ -134,36 +130,27 @@ bool FInventoryDelegateTest::RunTest(const FString& Parameters)
     UWorld* World = VremTestHelper::CreateTestWorld();
     AActor* Actor = VremInventoryTestHelper::CreateActorWithInventory(World);
     UVremInventoryComponent* InvComp = Actor->FindComponentByClass<UVremInventoryComponent>();
-    InvComp->InitializeFromOwner();
 
-    bool bDelegateFired = false;
-    InvComp->OnItemInstanceCreated.AddLambda([&bDelegateFired](UVremItemInstance*)
-        {
-            bDelegateFired = true;
-        });
+    UVremInventoryTestListener* Listener = NewObject<UVremInventoryTestListener>(InvComp);
+    InvComp->OnItemInstanceCreated.AddDynamic(Listener, &UVremInventoryTestListener::HandleItemInstanceCreated);
+    InvComp->OnItemInstanceRemoved.AddDynamic(Listener, &UVremInventoryTestListener::HandleItemInstanceRemoved);
 
     UVremItemDefinition* ItemDef = VremInventoryTestHelper::CreateTestItemDefinition();
     InvComp->TestAddItem(ItemDef);
 
-    TestTrue(TEXT("OnItemInstanceCreated should have fired"), bDelegateFired);
+    TestTrue(TEXT("OnItemInstanceCreated should have fired"), Listener->bCreatedFired);
 
-    FPrimaryAssetId RemovedId;
-    InvComp->OnItemInstanceRemoved.AddLambda([&RemovedId](const FPrimaryAssetId& ItemId)
-        {
-            RemovedId = ItemId;
-        });
+    FString ExpectedDefName = ItemDef->GetName();
+    InvComp->TestRemoveItem(ItemDef->GetPrimaryAssetId());
 
-    FPrimaryAssetId ExpectedId = ItemDef->GetPrimaryAssetId();
-    InvComp->TestRemoveItem(ExpectedId);
-
-    TestEqual(TEXT("OnItemInstanceRemoved should broadcast correct ItemId"), RemovedId, ExpectedId);
+    TestEqual(TEXT("OnItemInstanceRemoved should broadcast correct Definition"), Listener->LastRemovedDef, ExpectedDefName);
 
     VremTestHelper::DestroyTestWorld(World);
     return true;
 }
 
 // ============================================
-// º¹Á¦ ½Ã¹Ä·¹ÀÌ¼Ç Å×½ºÆ®
+// ï¿½ï¿½ï¿½ï¿½ ï¿½Ã¹Ä·ï¿½ï¿½Ì¼ï¿½ ï¿½×½ï¿½Æ®
 // ============================================
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(
     FInventoryReplicationSimTest,
@@ -177,11 +164,9 @@ bool FInventoryReplicationSimTest::RunTest(const FString& Parameters)
 
     AActor* ServerActor = VremInventoryTestHelper::CreateActorWithInventory(World);
     UVremInventoryComponent* ServerComp = ServerActor->FindComponentByClass<UVremInventoryComponent>();
-    ServerComp->InitializeFromOwner();
 
     AActor* ClientActor = VremInventoryTestHelper::CreateActorWithInventory(World);
-    UVremInventoryComponent* ClientComp = ClientActor->FindComponentByClass<UVremInventoryComponent>();
-    ClientComp->InitializeFromOwner();
+	UVremInventoryComponent* ClientComp = ClientActor->FindComponentByClass<UVremInventoryComponent>();
 
     UVremItemDefinition* ItemDef = VremInventoryTestHelper::CreateTestItemDefinition();
 

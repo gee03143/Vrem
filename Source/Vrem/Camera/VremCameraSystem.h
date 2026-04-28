@@ -17,8 +17,14 @@ public:
 	UVremCameraSystem();
 
 public:	
+	// Blueprint API
+    UFUNCTION(BlueprintCallable, Category="Vrem|Camera")
+    void RequestSetCameraMode(UVremCameraMode* InVremCameraMode);
+
 
 	void SetTargetCameraMode(UVremCameraMode* InVremCameraMode) { TargetCameraMode = InVremCameraMode; }
+	bool HasTargetCameraMode() const { return TargetCameraMode.IsValid(); }
+
 	FVremCameraState GetBlendedCameraState();
 	bool IsBlending() const;
 
