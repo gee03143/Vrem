@@ -208,7 +208,8 @@ void UVremCheatManager::TestSetCurrentWeapon(int32 SlotIndex)
     UVremEquipmentComponent* EquipmentComponent = PC->GetPawn()->FindComponentByClass<UVremEquipmentComponent>();
     if (IsValid(EquipmentComponent))
     {
-        EquipmentComponent->ServerSetCurrentWeapon(SlotIndex);
+        const bool bSwapWithHolster = EquipmentComponent->GetHolsteredSlotIndex() == SlotIndex;
+        EquipmentComponent->ServerSetCurrentWeapon(SlotIndex, bSwapWithHolster ? EEquipmentState::Holstered : EEquipmentState::Stowed);
     }
 }
 

@@ -6,8 +6,9 @@
 #include "Vrem/VremLogChannels.h"
 #include "Engine/DamageEvents.h"
 #include "GameFramework/PlayerController.h"
+#include "GameFramework/Character.h"
 #include "DrawDebugHelpers.h"
-#include "../Weapon/VremWeaponHandlerInterface.h"
+#include "Vrem/Equipment/Weapon/VremWeaponHandlerInterface.h"
 
 // 디버그 CVar (무기 시스템과 네임스페이스 일관성 유지)
 static TAutoConsoleVariable<int32> CVarDebugMeleeAttack(
@@ -57,9 +58,9 @@ void UVremMeleeComponent::TryMeleeAttack()
         return;
     }
 
-    // 공격 모션 중이면 무시
     if (bIsAttacking)
     {
+        UE_LOG(LogVremWeapon, Warning, TEXT("TryMeleeAttack: already bIsAttacking is true"));
         return;
     }
 
@@ -68,6 +69,8 @@ void UVremMeleeComponent::TryMeleeAttack()
 
 void UVremMeleeComponent::ExecuteMeleeAttack()
 {
+    UE_LOG(LogVremWeapon, Warning, TEXT("ExecuteMeleeAttack"));
+
     APlayerController* PC = Cast<APlayerController>(GetInstigatorController());
     if (IsValid(PC) == false)
     {
@@ -143,10 +146,16 @@ void UVremMeleeComponent::ServerMeleeAttack_Implementation(int32 ComboIndex, FVe
 
 void UVremMeleeComponent::PerformMeleeHitDetection(int32 ComboIndex, const FVector& ViewOrigin, const FVector& ViewDirection)
 {
-    if (IsValid(MeleeDefinition) == false) return;
+    if (IsValid(MeleeDefinition) == false)
+    {
+        return;
+    }
 
     const FAttackSequence* Sequence = MeleeDefinition->GetSequenceAt(ComboIndex);
-    if (Sequence == nullptr) return;
+    if (Sequence == nullptr)
+    {
+        return;
+    }
 
     const bool bShowDebug = CVarDebugMeleeAttack.GetValueOnGameThread() > 0;
 
@@ -198,12 +207,34 @@ void UVremMeleeComponent::PerformMeleeHitDetection(int32 ComboIndex, const FVect
 
 void UVremMeleeComponent::MulticastOnMeleeAttack_Implementation(int32 ComboIndex)
 {
-    // TODO: 이펙트/사운드 재생 (모든 클라이언트)
-    // const FAttackSequence* Sequence = MeleeDefinition->GetSequenceAt(ComboIndex);
-    // if (Sequence && Sequence->AttackMontage) → PlayMontage
-    // MeleeDefinition->SwingSound, HitImpactEffect 스폰
+    if (IsValid(MeleeDefinition) == false)
+    {
+        UE_LOG(LogVremWeapon, Warning, TEXT("MulticastOnMeleeAttack_Implementation: MeleeDefinition is invalid"));
+        return;
+    }
 
-    UE_LOG(LogVremWeapon, Log, TEXT("MulticastOnMeleeAttack ComboIndex=%d"), ComboIndex);
+    const FAttackSequence* Sequence = MeleeDefinition->GetSequenceAt(ComboIndex);
+    if (Sequence == nullptr || Sequence->AttackMontage == nullptr)
+    {
+        UE_LOG(LogVremWeapon, Warning, TEXT("MulticastOnMeleeAttack_Implementation: Sequence or attackmontage is nullptr"));
+        return;
+    }
+
+    ACharacter* WeaponOwner = Cast<ACharacter>(GetWeaponOwner());
+    if (IsValid(WeaponOwner) == false)
+    {
+        UE_LOG(LogVremWeapon, Warning, TEXT("MulticastOnMeleeAttack_Implementation: WeaponOwner is not character WeaponOwner : [%s]"), *WeaponOwner->GetName());
+        return;
+    }
+
+    const float Length = WeaponOwner->PlayAnimMontage(Sequence->AttackMontage);
+    UE_LOG(LogVremWeapon, Warning, TEXT("PlayAnimMontage length=%.2f, montage=%s, owner=%s"),
+        Length,
+        *Sequence->AttackMontage->GetName(),
+        *WeaponOwner->GetName());
+
+    // TODO: 이펙트/사운드 재생 (모든 클라이언트)
+    // MeleeDefinition->SwingSound, HitImpactEffect 스폰
 }
 
 #if WITH_AUTOMATION_WORKER
