@@ -123,6 +123,20 @@ void FEquipmentList::RemoveEntry(int32 InIndex)
 	}
 }
 
+TArray<FVremEquipmentSlotView> FEquipmentList::CollectEntryViews() const
+{
+	TArray<FVremEquipmentSlotView> Result;
+	Result.Reserve(Entries.Num());
+	for (const FEquipmentEntry& Entry : Entries)
+	{
+		FVremEquipmentSlotView& View = Result.Emplace_GetRef();
+		View.SlotIndex = Entry.EquipmentIndex;
+		View.Definition = Entry.EquipmentDefiniton.Get();
+		View.State = Entry.EquipmentState;
+	}
+	return Result;
+}
+
 void FEquipmentList::PostReplicatedAdd(const TArrayView<int32> AddedIndices, int32 FinalSize)
 {
 	for (int32 Index : AddedIndices)
@@ -342,6 +356,11 @@ void UVremEquipmentComponent::RequestUnequipItemByDefinition(const UVremEquipmen
 	}
 }
 
+TArray<FVremEquipmentSlotView> UVremEquipmentComponent::GetEquipmentEntries() const
+{	
+	return EquipmentList.CollectEntryViews();
+}
+
 void UVremEquipmentComponent::SetCurrentWeapon(int32 InWeaponSlotIndex, EEquipmentState PrevOnHandDest)
 {
 	check(IsValid(GetOwner()));
@@ -379,6 +398,8 @@ void UVremEquipmentComponent::SetCurrentWeapon(int32 InWeaponSlotIndex, EEquipme
 	// 새 장비를 손에 장착한다
 	NewEntry->SetAndApplyEquipmentState(EEquipmentState::OnHand);
 	EquipmentList.MarkItemDirty(*NewEntry);
+
+	OnEquipmentUpdated.Broadcast();
 }
 
 AVremEquipmentActor* UVremEquipmentComponent::GetCurrentEquipmentActor() const
@@ -401,6 +422,7 @@ void UVremEquipmentComponent::TryEquipItem(const UVremEquipmentDefinition* ItemT
 	if (IsValid(ItemToEquip))
 	{ 
 		EquipmentList.AddEntry(ItemToEquip, InSlotIndex);
+		OnEquipmentUpdated.Broadcast();
 	}
 }
 
@@ -410,6 +432,7 @@ void UVremEquipmentComponent::TryUnequipItem(int32 InSlotIndex)
 	check(GetOwner()->HasAuthority());
 
 	EquipmentList.RemoveEntry(InSlotIndex);
+	OnEquipmentUpdated.Broadcast();
 }
 
 void UVremEquipmentComponent::TryUnequipItem(const UVremEquipmentDefinition* InEquipmentDefinition)
@@ -466,6 +489,7 @@ void UVremEquipmentComponent::OnInstanceDestroyed(TSubclassOf<UAnimInstance> Ani
 void UVremEquipmentComponent::OnRep_EquipmentList()
 {
 	EquipmentList.SetOwner(this);
+	OnEquipmentUpdated.Broadcast();
 }
 
 int32 UVremEquipmentComponent::GetOnHandSlotIndex() const

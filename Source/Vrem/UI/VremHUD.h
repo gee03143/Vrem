@@ -1,4 +1,4 @@
-// Fill out your copyright notice in the Description page of Project Settings.
+ï»¿// Fill out your copyright notice in the Description page of Project Settings.
 
 #pragma once
 
@@ -6,27 +6,44 @@
 #include "GameFramework/HUD.h"
 #include "VremHUD.generated.h"
 
+class UVremDebugHUDWidget;
 
-// TODO: ÃßÈÄ CommonUI ±â¹İ UMG À§Á¬À¸·Î ¸¶ÀÌ±×·¹ÀÌ¼Ç ¿¹Á¤.
-// ÇöÀç´Â ½ºÇÁ·¹µå ½Ã°¢ °ËÁõÀ» À§ÇÑ ÀÓ½Ã ±¸Çö.
+// TODO: ì¶”í›„ CommonUI ê¸°ë°˜ UMG ìœ„ì ¯ìœ¼ë¡œ ë§ˆì´ê·¸ë ˆì´ì…˜ ì˜ˆì •.
+// í˜„ì¬ëŠ” ìŠ¤í”„ë ˆë“œ ì‹œê° ê²€ì¦ì„ ìœ„í•œ ì„ì‹œ êµ¬í˜„.
 UCLASS()
 class VREM_API AVremHUD : public AHUD
 {
 	GENERATED_BODY()
 	
-	public:
+public:
     virtual void DrawHUD() override;
+
+protected:
+    virtual void BeginPlay() override;
+    virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
+
+    /** ì ìœ  í°ì´ ë°”ë€” ë•Œ ìœ„ì ¯ì„ ì¬ë°”ì¸ë”© */
+    UFUNCTION()
+    void HandlePossessedPawnChanged(APawn* OldPawn, APawn* NewPawn);
 
 protected:
     void DrawCrosshair();
 
-    // ÇöÀç ¼ÒÀ¯ PawnÀÇ ¹«±â ½ºÇÁ·¹µå °ª ¹İÈ¯ (µµ ´ÜÀ§)
+    // í˜„ì¬ ì†Œìœ  Pawnì˜ ë¬´ê¸° ìŠ¤í”„ë ˆë“œ ê°’ ë°˜í™˜ (ë„ ë‹¨ìœ„)
     float GetOwnerWeaponSpread() const;
 
     bool ShouldDrawCrosshair() const;
 
 protected:
-    // TODO: ÃßÈÄ DataAsset ºĞ¸® °í·Á..
+    // ---- ì¶”ê°€: ë””ë²„ê·¸ HUD ìœ„ì ¯ ----
+    /** WBPì—ì„œ ì§€ì • â€” ë””ë²„ê·¸ HUD ìœ„ì ¯ í´ë˜ìŠ¤ */
+    UPROPERTY(EditDefaultsOnly, Category = "Debug HUD")
+    TSubclassOf<UVremDebugHUDWidget> DebugHUDWidgetClass;
+
+    UPROPERTY(Transient)
+    TObjectPtr<UVremDebugHUDWidget> DebugHUDWidget;
+
+    // TODO: ì¶”í›„ DataAsset ë¶„ë¦¬ ê³ ë ¤..
     UPROPERTY(EditDefaultsOnly, Category = "Crosshair")
     float BaseGap = 6.f;
 
@@ -36,7 +53,7 @@ protected:
     UPROPERTY(EditDefaultsOnly, Category = "Crosshair")
     float LineThickness = 2.f;
 
-    // ½ºÇÁ·¹µå(µµ)¸¦ Å©·Î½ºÇì¾î °£°İ(ÇÈ¼¿)¿¡ ¸ÅÇÎÇÒ ¶§ »ç¿ëÇÏ´Â ¹èÀ²
+    // ìŠ¤í”„ë ˆë“œ(ë„)ë¥¼ í¬ë¡œìŠ¤í—¤ì–´ ê°„ê²©(í”½ì…€)ì— ë§¤í•‘í•  ë•Œ ì‚¬ìš©í•˜ëŠ” ë°°ìœ¨
     UPROPERTY(EditDefaultsOnly, Category = "Crosshair")
     float SpreadToPixelScale = 10.f;
 

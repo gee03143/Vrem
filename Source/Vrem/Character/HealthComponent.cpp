@@ -10,7 +10,7 @@
 UHealthComponent::UHealthComponent()
 {
 	SetIsReplicatedByDefault(true);
-
+	bWantsInitializeComponent = true;
 }
 
 void UHealthComponent::BeginDestroy()
@@ -63,8 +63,6 @@ void UHealthComponent::OnTakePointDamageHandle(AActor* DamagedActor, float Damag
 		return;
 	}
 
-	UE_LOG(LogVrem, Warning, TEXT("UHealthComponent::OnTakePointDamageHandle"));
-
 	// TODO: Implement Taking Point Damage logic
 	// ex) headshot
 	const float PrevHealth = Health;
@@ -80,8 +78,6 @@ void UHealthComponent::OnTakeRadialDamageHandle(AActor* DamagedActor, float Dama
 	{
 		return;
 	}
-
-	UE_LOG(LogVrem, Warning, TEXT("UHealthComponent::OnTakeRadialDamageHandle"));
 
 	// TODO: Implement Taking Radial Damage logic
 	// ex) distance falloff

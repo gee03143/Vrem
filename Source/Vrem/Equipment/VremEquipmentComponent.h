@@ -14,6 +14,18 @@ class AVremEquipmentActor;
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnEquipmentChanged, TSubclassOf<UAnimInstance>, AnimLayerClass);
 
+USTRUCT(BlueprintType)
+struct FVremEquipmentSlotView
+{
+    GENERATED_BODY()
+
+    UPROPERTY(BlueprintReadOnly) 
+	int32 SlotIndex = INDEX_NONE;
+    UPROPERTY(BlueprintReadOnly) 
+	const UVremEquipmentDefinition* Definition = nullptr;
+    UPROPERTY(BlueprintReadOnly) 
+	EEquipmentState State = EEquipmentState::Holstered;
+};
 
 USTRUCT()
 struct FEquipmentEntry : public FFastArraySerializerItem
@@ -97,6 +109,8 @@ struct FEquipmentList : public FFastArraySerializer
 	void AddEntry(const UVremEquipmentDefinition* InEquipmentDefinition, int32 InIndex);
 	void RemoveEntry(int32 InIndex);
 	int32 GetNumEntries() const { return Entries.Num(); }
+
+	TArray<FVremEquipmentSlotView> CollectEntryViews() const;
 
 	FString ToString() const
 	{
@@ -193,6 +207,7 @@ public:
 	void TryUnequipItem(const UVremEquipmentDefinition* InEquipmentDefinition);
 
 	FString GetEquipmentListString() const { return EquipmentList.ToString(); }
+	TArray<FVremEquipmentSlotView> GetEquipmentEntries() const;
 
 public:
 	UFUNCTION(Server, Reliable)
@@ -209,6 +224,9 @@ protected:
 	void OnInstanceDestroyed(TSubclassOf<UAnimInstance> AnimLayerClass);
 	void OnEquipmentActorReplicated(AVremEquipmentActor* InActor);
 public:
+	DECLARE_MULTICAST_DELEGATE(FOnEquipmentUpdated)
+	FOnEquipmentUpdated OnEquipmentUpdated;
+
 	UPROPERTY(BlueprintAssignable)
 	FOnEquipmentChanged OnEquipmentAttached;
 

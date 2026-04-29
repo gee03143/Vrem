@@ -33,6 +33,19 @@ void FInventoryList::SetOwner(UVremInventoryComponent* InOwner)
 	}
 }
 
+TArray<FVremInventoryEntryView> FInventoryList::CollectEntryViews() const
+{
+	TArray<FVremInventoryEntryView> Result;
+	Result.Reserve(Entries.Num());
+	for (const FInventoryEntry& Entry : Entries)
+	{
+		FVremInventoryEntryView& View = Result.Emplace_GetRef();
+		View.ItemId = Entry.ItemId;
+		View.Count = Entry.Count;
+		View.Instance = Entry.ItemInstance;
+	}
+	return Result;
+}
 
 void FInventoryList::AddEntry(const FPrimaryAssetId& ItemToAdd)
 {
@@ -218,6 +231,11 @@ void UVremInventoryComponent::RemoveItemFromInventory(const UVremItemDefinition*
 
 	InventoryItems.RemoveEntry(ItemToRemove->GetPrimaryAssetId());
 	OnInventoryChanged.Broadcast();
+}
+
+TArray<FVremInventoryEntryView> UVremInventoryComponent::GetInventoryEntries() const
+{
+	return InventoryItems.CollectEntryViews();
 }
 
 void UVremInventoryComponent::ServerAddItemToInventory_Implementation(const UVremItemDefinition* ItemToAdd)

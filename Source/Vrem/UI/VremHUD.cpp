@@ -1,4 +1,4 @@
-// Fill out your copyright notice in the Description page of Project Settings.
+ï»¿// Fill out your copyright notice in the Description page of Project Settings.
 
 
 #include "VremHUD.h"
@@ -6,6 +6,7 @@
 #include "GameplayTagAssetInterface.h"
 #include "Vrem/VremGameplayTags.h"
 #include "Vrem/Character/VremCharacter.h"
+#include "VremDebugHUDWidget.h"
 
 void AVremHUD::DrawHUD()
 {
@@ -25,7 +26,7 @@ bool AVremHUD::ShouldDrawCrosshair() const
     const IGameplayTagAssetInterface* TagInterface = Cast<IGameplayTagAssetInterface>(Pawn);
     if (!TagInterface) return false;
 
-    // ADS ¶Ç´Â Scoped Á¶ÁØ ÁßÀÏ ¶§¸¸ Å©·Î½ºÇì¾î Ç¥½Ã
+    // ADS ë˜ëŠ” Scoped ì¡°ì¤€ ì¤‘ì¼ ë•Œë§Œ í¬ë¡œìŠ¤í—¤ì–´ í‘œì‹œ
     return TagInterface->HasMatchingGameplayTag(FVremGameplayTags::State_Aiming_ADS)
         || TagInterface->HasMatchingGameplayTag(FVremGameplayTags::State_Aiming_Scoped);
 }
@@ -39,6 +40,71 @@ float AVremHUD::GetOwnerWeaponSpread() const
     return Character->GetCurrentSpreadForUI();
 }
 
+void AVremHUD::BeginPlay()
+{
+    Super::BeginPlay();
+
+    APlayerController* PC = GetOwningPlayerController();
+    if (!IsValid(PC))
+    {
+        return;
+    }
+
+    // í° ë³€ê²½ ì½œë°± êµ¬ë… â€” ì¶”í›„ ì ìœ  ë³€ê²½ ì‹œ ì¬ë°”ì¸ë”©
+    PC->OnPossessedPawnChanged.AddDynamic(this, &AVremHUD::HandlePossessedPawnChanged);
+
+    // ìœ„ì ¯ ìƒì„± + viewport attach
+    if (DebugHUDWidgetClass)
+    {
+        DebugHUDWidget = CreateWidget<UVremDebugHUDWidget>(PC, DebugHUDWidgetClass);
+        if (DebugHUDWidget)
+        {
+            DebugHUDWidget->AddToViewport(0);
+        }
+    }
+
+    // ì´ë¯¸ í°ì„ ì ìœ  ì¤‘ì´ë©´ ì¦‰ì‹œ ë°”ì¸ë”©
+    if (APawn* CurrentPawn = PC->GetPawn())
+    {
+        HandlePossessedPawnChanged(nullptr, CurrentPawn);
+    }
+}
+
+void AVremHUD::EndPlay(const EEndPlayReason::Type EndPlayReason)
+{
+    if (APlayerController* PC = GetOwningPlayerController())
+    {
+        PC->OnPossessedPawnChanged.RemoveDynamic(this, &AVremHUD::HandlePossessedPawnChanged);
+    }
+
+    if (DebugHUDWidget)
+    {
+        DebugHUDWidget->UnbindFromCharacter();
+        DebugHUDWidget->RemoveFromParent();
+        DebugHUDWidget = nullptr;
+    }
+
+    Super::EndPlay(EndPlayReason);
+}
+
+void AVremHUD::HandlePossessedPawnChanged(APawn* OldPawn, APawn* NewPawn)
+{
+    if (!DebugHUDWidget)
+    {
+        return;
+    }
+
+    if (OldPawn)
+    {
+        DebugHUDWidget->UnbindFromCharacter();
+    }
+
+    if (DebugHUDWidget)
+    {
+        DebugHUDWidget->BindToCharacter(NewPawn);
+    }
+}
+
 void AVremHUD::DrawCrosshair()
 {
     if (Canvas == nullptr)
@@ -49,17 +115,17 @@ void AVremHUD::DrawCrosshair()
     const float CenterX = Canvas->SizeX * 0.5f;
     const float CenterY = Canvas->SizeY * 0.5f;
 
-    // ½ºÇÁ·¹µå °ª¿¡ µû¶ó °£°İÀ» È®Àå
+    // ìŠ¤í”„ë ˆë“œ ê°’ì— ë”°ë¼ ê°„ê²©ì„ í™•ì¥
     const float Spread = GetOwnerWeaponSpread();
     const float DynamicGap = BaseGap + Spread * SpreadToPixelScale;
 
-    // »ó
+    // ìƒ
     DrawLine(CenterX, CenterY - DynamicGap, CenterX, CenterY - DynamicGap - LineLength, CrosshairColor, LineThickness);
-    // ÇÏ
+    // í•˜
     DrawLine(CenterX, CenterY + DynamicGap, CenterX, CenterY + DynamicGap + LineLength, CrosshairColor, LineThickness);
-    // ÁÂ
+    // ì¢Œ
     DrawLine(CenterX - DynamicGap, CenterY, CenterX - DynamicGap - LineLength, CenterY, CrosshairColor, LineThickness);
-    // ¿ì
+    // ìš°
     DrawLine(CenterX + DynamicGap, CenterY, CenterX + DynamicGap + LineLength, CenterY, CrosshairColor, LineThickness);
 }
 

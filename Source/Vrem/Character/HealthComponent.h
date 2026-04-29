@@ -24,6 +24,13 @@ public:
 
 	void Cleanup();
 
+public:
+    UFUNCTION(BlueprintPure, Category = "Health")
+    float GetHealth() const { return Health; }
+
+    UFUNCTION(BlueprintPure, Category = "Health")
+    float GetMaxHealth() const { return MaxHealth; }
+
 protected:
 	UFUNCTION()
 	void OnTakePointDamageHandle(AActor* DamagedActor, float Damage, class AController* InstigatedBy, FVector HitLocation, class UPrimitiveComponent* FHitComponent,

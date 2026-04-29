@@ -15,6 +15,21 @@ class UVremInventoryComponent;
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnItemInstanceCreated, UVremItemInstance*, ItemInstance);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnItemInstanceRemoved, const UVremItemDefinition*, ItemDefinition);
 
+USTRUCT(BlueprintType)
+struct FVremInventoryEntryView
+{
+    GENERATED_BODY()
+
+    UPROPERTY(BlueprintReadOnly, Category = "Vrem|Inventory")
+    FPrimaryAssetId ItemId;
+
+    UPROPERTY(BlueprintReadOnly, Category = "Vrem|Inventory")
+    int32 Count = 0;
+
+    UPROPERTY(BlueprintReadOnly, Category = "Vrem|Inventory")
+    UVremItemInstance* Instance = nullptr;
+};
+
 USTRUCT()
 struct FInventoryEntry : public FFastArraySerializerItem
 {
@@ -57,6 +72,8 @@ struct FInventoryList : public FFastArraySerializer
 
 		return FoundEntry;
 	}
+
+	TArray<FVremInventoryEntryView> CollectEntryViews() const;
 
 	void AddEntry(const FPrimaryAssetId& ItemToAdd);
 	void RemoveEntry(const FPrimaryAssetId& ItemToRemove);
@@ -127,6 +144,7 @@ public:
 	void RemoveItemFromInventory(const UVremItemDefinition* ItemToRemove);
 	FString GetInventoryItemsString() const { return InventoryItems.ToString(); }
 	int32 GetInventoryItemNum() const { return InventoryItems.GetNumEntries(); }
+	TArray<FVremInventoryEntryView> GetInventoryEntries() const;
 
 	UFUNCTION(Server, Reliable)
 	void ServerAddItemToInventory(const UVremItemDefinition* ItemToAdd);
