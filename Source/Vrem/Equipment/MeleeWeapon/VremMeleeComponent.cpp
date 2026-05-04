@@ -86,14 +86,8 @@ void UVremMeleeComponent::ExecuteMeleeAttack()
     const int32 SequenceIndex = CurrentComboIndex;
     const FAttackSequence* Sequence = MeleeDefinition->GetSequenceAt(SequenceIndex);
 
-    // 뷰포인트 계산 (히트 판정 기준)
-    FVector ViewOrigin;
-    FRotator ViewRotation;
-    PC->GetPlayerViewPoint(ViewOrigin, ViewRotation);
-    const FVector ViewDirection = ViewRotation.Vector();
-
     // 서버에 판정 위임
-    ServerMeleeAttack(SequenceIndex, ViewOrigin, ViewDirection);
+    ServerMeleeAttack(SequenceIndex);
 
     // 로컬 상태 업데이트
     bIsAttacking = true;
@@ -149,13 +143,39 @@ void UVremMeleeComponent::OnCancelTimeStarted()
     bCanCancel = true;
 }
 
-void UVremMeleeComponent::ServerMeleeAttack_Implementation(int32 ComboIndex, FVector ViewOrigin, FVector ViewDirection)
+void UVremMeleeComponent::OnHitTimeStarted()
 {
-    PerformMeleeHitDetection(ComboIndex, ViewOrigin, ViewDirection);
+    if (LastAttackComboIndex == INDEX_NONE)
+    {
+        UE_LOG(LogVremWeapon, Warning, TEXT("OnHitTimeReached: no cached attack info"));
+        return;
+    }
+
+    PerformMeleeHitDetection(LastAttackComboIndex);
+}
+
+void UVremMeleeComponent::ServerMeleeAttack_Implementation(int32 ComboIndex)
+{
+    // 기존 타이머 클리어
+    GetWorld()->GetTimerManager().ClearTimer(HitTimer);
+
+    // 임팩트 시점에 사용할 정보 캐시
+    LastAttackComboIndex = ComboIndex;
+
+    // HitTime 후 히트 판정 발동
+    const FAttackSequence* Sequence = IsValid(MeleeDefinition) ? MeleeDefinition->GetSequenceAt(ComboIndex) : nullptr;
+    if (Sequence)
+    {
+        FTimerDelegate HitDelegate;
+        HitDelegate.BindUObject(this, &UVremMeleeComponent::OnHitTimeStarted);
+        GetWorld()->GetTimerManager().SetTimer(
+            HitTimer, HitDelegate, Sequence->HitTime, false);
+    }
+
     MulticastOnMeleeAttack(ComboIndex);
 }
 
-void UVremMeleeComponent::PerformMeleeHitDetection(int32 ComboIndex, const FVector& ViewOrigin, const FVector& ViewDirection)
+void UVremMeleeComponent::PerformMeleeHitDetection(int32 ComboIndex)
 {
     if (IsValid(MeleeDefinition) == false)
     {
@@ -168,9 +188,16 @@ void UVremMeleeComponent::PerformMeleeHitDetection(int32 ComboIndex, const FVect
         return;
     }
 
+    AActor* WeaponOwner = GetWeaponOwner();
+    if (!IsValid(WeaponOwner))
+    {
+        return;
+    }
+
     const bool bShowDebug = CVarDebugMeleeAttack.GetValueOnGameThread() > 0;
 
-    FVector TraceEnd = ViewOrigin + ViewDirection * Sequence->Range;
+    const FVector TraceStart = WeaponOwner->GetActorLocation();
+    const FVector TraceEnd = TraceStart + WeaponOwner->GetActorForwardVector() * Sequence->Range;
 
     FCollisionQueryParams QueryParams;
     QueryParams.AddIgnoredActor(GetOwner());              // EquipmentActor
@@ -179,7 +206,7 @@ void UVremMeleeComponent::PerformMeleeHitDetection(int32 ComboIndex, const FVect
     FHitResult HitResult;
     const bool bHit = GetWorld()->SweepSingleByChannel(
         HitResult,
-        ViewOrigin,
+        TraceStart,
         TraceEnd,
         FQuat::Identity,
         ECC_Visibility,
@@ -191,10 +218,10 @@ void UVremMeleeComponent::PerformMeleeHitDetection(int32 ComboIndex, const FVect
     {
         DrawDebugCapsule(
             GetWorld(),
-            (ViewOrigin + TraceEnd) * 0.5f,
-            (TraceEnd - ViewOrigin).Size() * 0.5f,
+            (TraceStart + TraceEnd) * 0.5f,
+            (TraceEnd - TraceStart).Size() * 0.5f + Sequence->TraceRadius,
             Sequence->TraceRadius,
-            FRotationMatrix::MakeFromZ(ViewDirection).ToQuat(),
+            FRotationMatrix::MakeFromZ(WeaponOwner->GetActorForwardVector()).ToQuat(),
             bHit ? FColor::Green : FColor::Red,
             false, 1.f, 0, 1.f);
     }
@@ -203,7 +230,7 @@ void UVremMeleeComponent::PerformMeleeHitDetection(int32 ComboIndex, const FVect
     {
         FPointDamageEvent DamageEvent;
         DamageEvent.HitInfo = HitResult;
-        DamageEvent.ShotDirection = ViewDirection;
+        DamageEvent.ShotDirection = WeaponOwner->GetActorForwardVector();
 
         HitResult.GetActor()->TakeDamage(
             Sequence->Damage,
@@ -221,11 +248,11 @@ void UVremMeleeComponent::MulticastOnMeleeAttack_Implementation(int32 ComboIndex
     ACharacter* WeaponOwner = Cast<ACharacter>(GetWeaponOwner());
     if (IsValid(WeaponOwner) == false)
     {
-        UE_LOG(LogVremWeapon, Warning, TEXT("MulticastOnMeleeAttack_Implementation: WeaponOwner is not character WeaponOwner : [%s]"), *WeaponOwner->GetName());
+        UE_LOG(LogVremWeapon, Warning, TEXT("MulticastOnMeleeAttack_Implementation: WeaponOwner is invalid"));
         return;
     }
 
-    if (IsValid(WeaponOwner) && WeaponOwner->GetLocalRole() != ROLE_AutonomousProxy)
+    if (WeaponOwner->GetLocalRole() != ROLE_AutonomousProxy)
     {
         PlayMontageLocally(ComboIndex);
     }

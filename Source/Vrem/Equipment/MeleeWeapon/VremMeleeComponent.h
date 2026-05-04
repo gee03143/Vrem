@@ -26,13 +26,13 @@ protected:
     void ExecuteMeleeAttack();
 
     UFUNCTION(Server, Reliable)
-    void ServerMeleeAttack(int32 ComboIndex, FVector ViewOrigin, FVector ViewDirection);
+    void ServerMeleeAttack(int32 ComboIndex);
 
     UFUNCTION(NetMulticast, Unreliable)
     void MulticastOnMeleeAttack(int32 ComboIndex);
     void PlayMontageLocally(int32 ComboIndex);
     // 서버 히트 판정 (Sphere Trace)
-    void PerformMeleeHitDetection(int32 ComboIndex, const FVector& ViewOrigin, const FVector& ViewDirection);
+    void PerformMeleeHitDetection(int32 ComboIndex);
 
     // 쿨다운/콤보 상태
     bool IsAttacking() const;    // AttackDuration 중
@@ -40,6 +40,7 @@ protected:
 
     void OnAttackDurationFinished();  // 공격 모션 종료 시점
     void OnCancelTimeStarted();     // 지금부터 캔슬 후 다음 시퀸스 재생 가능
+    void OnHitTimeStarted();        // 지금 히트 판정 체크
 
     AController* GetInstigatorController() const;
     AActor* GetWeaponOwner() const;
@@ -55,6 +56,9 @@ private:
 
     FTimerHandle AttackDurationTimer;
     FTimerHandle CancelTimeTimer;
+    FTimerHandle HitTimer;
+
+    int32 LastAttackComboIndex = INDEX_NONE;
 
 #if WITH_AUTOMATION_WORKER
 public:

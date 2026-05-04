@@ -39,6 +39,10 @@ struct FAttackSequence
     UPROPERTY(EditDefaultsOnly, Category = "Attack", meta = (ClampMin = "0.0"))
     float TraceRadius = 40.f;
 
+    // 서버에서 히트 판정이 발동하는 시점
+    UPROPERTY(EditDefaultsOnly, Category = "Attack", meta = (ClampMin = "0.0"))
+    float HitTime = 0.2f;
+
     // 공격 몽타주의 전체 길이 (Swing + Return to Idle)
     UPROPERTY(EditDefaultsOnly, Category = "Attack|Combo", meta = (ClampMin = "0.0"))
     float AttackDuration = 0.5f;
