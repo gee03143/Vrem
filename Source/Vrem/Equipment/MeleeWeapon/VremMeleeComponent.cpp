@@ -39,9 +39,9 @@ bool UVremMeleeComponent::IsAttacking() const
     return bIsAttacking;
 }
 
-bool UVremMeleeComponent::IsInComboWindow() const
+bool UVremMeleeComponent::CanCancel() const
 {
-    return bIsInComboWindow;
+    return bCanCancel;
 }
 
 void UVremMeleeComponent::TryMeleeAttack()
@@ -58,9 +58,9 @@ void UVremMeleeComponent::TryMeleeAttack()
         return;
     }
 
-    if (bIsAttacking)
+    if (bIsAttacking && bCanCancel == false)
     {
-        UE_LOG(LogVremWeapon, Warning, TEXT("TryMeleeAttack: already bIsAttacking is true"));
+        UE_LOG(LogVremWeapon, Warning, TEXT("TryMeleeAttack: already bIsAttacking is true and Can't Cancel yet"));
         return;
     }
 
@@ -97,7 +97,18 @@ void UVremMeleeComponent::ExecuteMeleeAttack()
 
     // 로컬 상태 업데이트
     bIsAttacking = true;
-    bIsInComboWindow = false;
+    bCanCancel = false;
+
+    AActor* WeaponOwner = GetWeaponOwner();
+    if (IsValid(WeaponOwner) && WeaponOwner->GetLocalRole() == ROLE_AutonomousProxy)
+    {
+        PlayMontageLocally(CurrentComboIndex);
+    }
+
+    // 기존 타이머 클리어
+    FTimerManager& TimerManager = GetWorld()->GetTimerManager();
+    TimerManager.ClearTimer(AttackDurationTimer);
+    TimerManager.ClearTimer(CancelTimeTimer);
 
     if (IVremWeaponHandler* Handler = Cast<IVremWeaponHandler>(GetWeaponOwner()))
     {
@@ -107,15 +118,15 @@ void UVremMeleeComponent::ExecuteMeleeAttack()
     // 타이머들 세팅
     FTimerDelegate DurationDelegate;
     DurationDelegate.BindUObject(this, &UVremMeleeComponent::OnAttackDurationFinished);
-    GetWorld()->GetTimerManager().SetTimer(
+    TimerManager.SetTimer(
         AttackDurationTimer, DurationDelegate,
         Sequence->AttackDuration, false);
 
-    FTimerDelegate ComboDelegate;
-    ComboDelegate.BindUObject(this, &UVremMeleeComponent::OnComboWindowFinished);
-    GetWorld()->GetTimerManager().SetTimer(
-        ComboWindowTimer, ComboDelegate,
-        Sequence->AttackCooldown, false);
+    FTimerDelegate CancelDelegate;
+    CancelDelegate.BindUObject(this, &UVremMeleeComponent::OnCancelTimeStarted);
+    TimerManager.SetTimer(
+        CancelTimeTimer, CancelDelegate,
+        Sequence->CancelTime, false);
 
     // 콤보 인덱스 증가 (마지막이면 리셋)
     CurrentComboIndex = (CurrentComboIndex + 1) % MeleeDefinition->GetComboCount();
@@ -124,7 +135,8 @@ void UVremMeleeComponent::ExecuteMeleeAttack()
 void UVremMeleeComponent::OnAttackDurationFinished()
 {
     bIsAttacking = false;
-    bIsInComboWindow = true;  // 이제 콤보 윈도우 진입
+    bCanCancel = false;
+    CurrentComboIndex = 0;
 
     if (IVremWeaponHandler* Handler = Cast<IVremWeaponHandler>(GetWeaponOwner()))
     {
@@ -132,10 +144,9 @@ void UVremMeleeComponent::OnAttackDurationFinished()
     }
 }
 
-void UVremMeleeComponent::OnComboWindowFinished()
+void UVremMeleeComponent::OnCancelTimeStarted()
 {
-    bIsInComboWindow = false;
-    CurrentComboIndex = 0;  // 콤보 리셋
+    bCanCancel = true;
 }
 
 void UVremMeleeComponent::ServerMeleeAttack_Implementation(int32 ComboIndex, FVector ViewOrigin, FVector ViewDirection)
@@ -207,19 +218,6 @@ void UVremMeleeComponent::PerformMeleeHitDetection(int32 ComboIndex, const FVect
 
 void UVremMeleeComponent::MulticastOnMeleeAttack_Implementation(int32 ComboIndex)
 {
-    if (IsValid(MeleeDefinition) == false)
-    {
-        UE_LOG(LogVremWeapon, Warning, TEXT("MulticastOnMeleeAttack_Implementation: MeleeDefinition is invalid"));
-        return;
-    }
-
-    const FAttackSequence* Sequence = MeleeDefinition->GetSequenceAt(ComboIndex);
-    if (Sequence == nullptr || Sequence->AttackMontage == nullptr)
-    {
-        UE_LOG(LogVremWeapon, Warning, TEXT("MulticastOnMeleeAttack_Implementation: Sequence or attackmontage is nullptr"));
-        return;
-    }
-
     ACharacter* WeaponOwner = Cast<ACharacter>(GetWeaponOwner());
     if (IsValid(WeaponOwner) == false)
     {
@@ -227,27 +225,60 @@ void UVremMeleeComponent::MulticastOnMeleeAttack_Implementation(int32 ComboIndex
         return;
     }
 
-    const float Length = WeaponOwner->PlayAnimMontage(Sequence->AttackMontage);
-    UE_LOG(LogVremWeapon, Warning, TEXT("PlayAnimMontage length=%.2f, montage=%s, owner=%s"),
-        Length,
-        *Sequence->AttackMontage->GetName(),
-        *WeaponOwner->GetName());
+    if (IsValid(WeaponOwner) && WeaponOwner->GetLocalRole() != ROLE_AutonomousProxy)
+    {
+        PlayMontageLocally(ComboIndex);
+    }
+
 
     // TODO: 이펙트/사운드 재생 (모든 클라이언트)
     // MeleeDefinition->SwingSound, HitImpactEffect 스폰
 }
 
+void UVremMeleeComponent::PlayMontageLocally(int32 ComboIndex)
+{
+    if (IsValid(MeleeDefinition) == false)
+    {
+        UE_LOG(LogVremWeapon, Warning, TEXT("PlayMontageLocally: MeleeDefinition is invalid"));
+        return;
+    }
+
+    const FAttackSequence* Sequence = MeleeDefinition->GetSequenceAt(ComboIndex);
+    if (Sequence == nullptr || Sequence->AttackMontage == nullptr)
+    {
+        UE_LOG(LogVremWeapon, Warning, TEXT("PlayMontageLocally: Sequence or attackmontage is nullptr"));
+        return;
+    }
+
+    ACharacter* WeaponOwner = Cast<ACharacter>(GetWeaponOwner());
+    if (IsValid(WeaponOwner) == false)
+    {
+        UE_LOG(LogVremWeapon, Warning, TEXT("PlayMontageLocally: WeaponOwner is Invalid or not character"));
+        return;
+    }
+
+    const float Length = WeaponOwner->PlayAnimMontage(Sequence->AttackMontage);
+}
+
+
+
 #if WITH_AUTOMATION_WORKER
 
 void UVremMeleeComponent::SimulateAttackStart_ForTest()
 {
-    if (IsValid(MeleeDefinition) == false || MeleeDefinition->GetComboCount() == 0) return;
-    if (bIsAttacking) return;
+    if (IsValid(MeleeDefinition) == false || MeleeDefinition->GetComboCount() == 0)
+    {   
+        return;
+    }
+
+    if (bIsAttacking)
+    {
+        return;
+    }
 
     bIsAttacking = true;
-    bIsInComboWindow = false;
+    bCanCancel = false;
     CurrentComboIndex = (CurrentComboIndex + 1) % MeleeDefinition->GetComboCount();
 }
-
 #endif // WITH_AUTOMATION_WORKER
 

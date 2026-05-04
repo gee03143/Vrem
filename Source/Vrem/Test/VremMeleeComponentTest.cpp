@@ -29,8 +29,8 @@ namespace VremMeleeTestHelper
             Seq.Damage = 30.f + i * 10.f;
             Seq.Range = 150.f;
             Seq.TraceRadius = 40.f;
-            Seq.AttackDuration = 0.5f;
-            Seq.AttackCooldown = 0.9f;
+            Seq.AttackDuration = 0.9f;
+            Seq.CancelTime = 0.5f;
             Def->MeleeProfile.AttackSequences.Add(Seq);
         }
 
@@ -69,7 +69,7 @@ bool FMeleeInitialStateTest::RunTest(const FString& Parameters)
     VremMeleeTestHelper::FMeleeTestContext Context = VremMeleeTestHelper::CreateTestContext(World);
 
     TestFalse(TEXT("Initially not attacking"), Context.MeleeComp->IsAttacking_ForTest());
-    TestFalse(TEXT("Initially not in combo window"), Context.MeleeComp->IsInComboWindow_ForTest());
+    TestFalse(TEXT("Initially cannot cancel"), Context.MeleeComp->CanCancel_ForTest());
     TestEqual(TEXT("Initial combo index is 0"), Context.MeleeComp->GetCurrentComboIndex_ForTest(), 0);
 
     VremTestHelper::DestroyTestWorld(World);
@@ -87,20 +87,20 @@ bool FMeleeAttackStateTransitionTest::RunTest(const FString& Parameters)
     UWorld* World = VremTestHelper::CreateTestWorld();
     VremMeleeTestHelper::FMeleeTestContext Context = VremMeleeTestHelper::CreateTestContext(World);
 
-    // in attack duration (is attacking (ignores attackstart input), is in combo window)
+    // in attack duration (is attacking (ignores attackstart input))
     Context.MeleeComp->SimulateAttackStart_ForTest();
     TestTrue(TEXT("IsAttacking after start"), Context.MeleeComp->IsAttacking_ForTest());
-    TestFalse(TEXT("Not in combo window during attack"), Context.MeleeComp->IsInComboWindow_ForTest());
+    TestFalse(TEXT("Not in combo window during attack"), Context.MeleeComp->CanCancel_ForTest());
+
+    // cancel time started (is attacking, can cancel and go to next sequence)
+    Context.MeleeComp->TriggerCancelTimeStarted_ForTest();
+    TestTrue(TEXT("Can Cancel after Cancel time Started"), Context.MeleeComp->CanCancel_ForTest());
+    TestTrue(TEXT("Still Attacking after Cancel time Started"), Context.MeleeComp->IsAttacking_ForTest());
 
     // attack duration finished (is not attacking, is in combo window)
     Context.MeleeComp->TriggerAttackDurationFinished_ForTest();
     TestFalse(TEXT("Not attacking after duration ends"), Context.MeleeComp->IsAttacking_ForTest());
-    TestTrue(TEXT("In combo window after duration"), Context.MeleeComp->IsInComboWindow_ForTest());
-
-    // combo window finished (is not attacking, not in combo window)
-    Context.MeleeComp->TriggerComboWindowFinished_ForTest();
-    TestFalse(TEXT("Not in combo window after timeout"), Context.MeleeComp->IsInComboWindow_ForTest());
-    TestEqual(TEXT("Combo index reset after timeout"), Context.MeleeComp->GetCurrentComboIndex_ForTest(), 0);
+    TestFalse(TEXT("Cannot Cancel after attack duration"), Context.MeleeComp->CanCancel_ForTest());
 
     VremTestHelper::DestroyTestWorld(World);
     return true;
@@ -147,7 +147,7 @@ bool FMeleeComboTimeoutResetTest::RunTest(const FString& Parameters)
     Context.MeleeComp->TriggerAttackDurationFinished_ForTest();
     TestEqual(TEXT("after attackstart: Combo index = 1"), Context.MeleeComp->GetCurrentComboIndex_ForTest(), 1);
 
-    Context.MeleeComp->TriggerComboWindowFinished_ForTest();
+    Context.MeleeComp->TriggerCancelTimeStarted_ForTest();
     TestEqual(TEXT("combo window timeout: Combo index reset to 0"), Context.MeleeComp->GetCurrentComboIndex_ForTest(), 0);
 
     Context.MeleeComp->SimulateAttackStart_ForTest();

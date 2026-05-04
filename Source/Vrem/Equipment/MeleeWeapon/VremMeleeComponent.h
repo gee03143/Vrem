@@ -30,16 +30,16 @@ protected:
 
     UFUNCTION(NetMulticast, Unreliable)
     void MulticastOnMeleeAttack(int32 ComboIndex);
-
+    void PlayMontageLocally(int32 ComboIndex);
     // 서버 히트 판정 (Sphere Trace)
     void PerformMeleeHitDetection(int32 ComboIndex, const FVector& ViewOrigin, const FVector& ViewDirection);
 
     // 쿨다운/콤보 상태
-    bool IsAttacking() const;    // AttackDuration 중 (입력 무시)
-    bool IsInComboWindow() const; // Duration ~ Cooldown 사이
+    bool IsAttacking() const;    // AttackDuration 중
+    bool CanCancel() const; // CancelTime ~ AttackDuration 사이
 
     void OnAttackDurationFinished();  // 공격 모션 종료 시점
-    void OnComboWindowFinished();     // 쿨다운 종료 → 콤보 리셋
+    void OnCancelTimeStarted();     // 지금부터 캔슬 후 다음 시퀸스 재생 가능
 
     AController* GetInstigatorController() const;
     AActor* GetWeaponOwner() const;
@@ -51,10 +51,10 @@ protected:
 private:
     int32 CurrentComboIndex = 0;           // 다음 실행할 콤보 단계
     bool bIsAttacking = false;              // AttackDuration 중인가
-    bool bIsInComboWindow = false;          // Cooldown 중인가 (다음 입력 시 콤보 이어감)
+    bool bCanCancel = false;          // Cooldown 중인가 (다음 입력 시 콤보 이어감)
 
     FTimerHandle AttackDurationTimer;
-    FTimerHandle ComboWindowTimer;
+    FTimerHandle CancelTimeTimer;
 
 #if WITH_AUTOMATION_WORKER
 public:
@@ -67,14 +67,15 @@ public:
     // 상태 조회
     int32 GetCurrentComboIndex_ForTest() const { return CurrentComboIndex; }
     bool IsAttacking_ForTest() const { return bIsAttacking; }
-    bool IsInComboWindow_ForTest() const { return bIsInComboWindow; }
+    bool CanCancel_ForTest() const { return bCanCancel; }
 
     // 타이머 콜백 수동 호출
     void TriggerAttackDurationFinished_ForTest() { OnAttackDurationFinished(); }
-    void TriggerComboWindowFinished_ForTest() { OnComboWindowFinished(); }
+    void TriggerCancelTimeStarted_ForTest() { OnCancelTimeStarted(); }
 
     // 테스트 전용: ExecuteMeleeAttack의 상태 변화 부분만 수동 시뮬레이션
     // (Controller 의존 없음, 타이머 설정 없음)
     void SimulateAttackStart_ForTest();
 #endif
+
 };
