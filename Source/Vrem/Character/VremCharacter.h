@@ -46,6 +46,9 @@ public:
 
 	UFUNCTION(BlueprintImplementableEvent, Category="Vrem|Input")
 	void OnToggleADSPressed();
+
+	UFUNCTION(BlueprintImplementableEvent, Category="Vrem|Input")
+	void OnDodgePressed();
 protected:
 	void OnInputConfigLoaded(const UVremGameModeDefinition* InGameModeDefinition);
 	
@@ -57,6 +60,7 @@ protected:
 	void Attack_Temp(const FInputActionValue& Value);		// 임시.. 아마 무기 기능같은곳에 들어가야할거같음, 추후 무기 프라이머리 기능으로 들어갈 것
 	void StopAttack_Temp(const FInputActionValue& Value);		// 임시.. 아마 무기 기능같은곳에 들어가야할거같음, 추후 무기 프라이머리 기능으로 들어갈 것
 	void ToggleADS(const FInputActionValue& Value);	
+	void Dodge(const FInputActionValue& Value);
 
 	void TryBindInputByInputConfig();
 protected:

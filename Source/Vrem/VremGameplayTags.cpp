@@ -10,6 +10,7 @@ namespace FVremGameplayTags
 	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Input_Look, "Input.Look", "Look Input");
 	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Input_WeaponPrimary, "Input.WeaponPrimary", "Input_WeaponPrimary Input");
 	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Input_ToggleADS, "Input.ToggleADS", "Toggle ADS Input");
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Input_Dodge, "Input.Dodge", "Dodge Input");
 
 	// states
 	UE_DEFINE_GAMEPLAY_TAG_COMMENT(State_Aiming_ADS, "State.Aiming.ADS", "Character is in shoulder ADS mode");

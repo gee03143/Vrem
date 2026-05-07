@@ -230,6 +230,11 @@ void AVremCharacter::ToggleADS(const FInputActionValue& Value)
 	OnToggleADSPressed();
 }
 
+void AVremCharacter::Dodge(const FInputActionValue& Value)
+{
+	OnDodgePressed();
+}
+
 void AVremCharacter::TryBindInputByInputConfig()
 {
 	if (CurrentInputConfig.IsValid() == false)
@@ -277,6 +282,12 @@ void AVremCharacter::TryBindInputByInputConfig()
 		if (ToggleADSAction != nullptr)
 		{
 			EIC->BindAction(ToggleADSAction, ETriggerEvent::Completed, this, &AVremCharacter::ToggleADS);
+		}
+
+		const UInputAction* DodgeAction = CurrentInputConfig->FindInputActionByTag(FVremGameplayTags::Input_Dodge);
+		if (DodgeAction != nullptr)
+		{
+			EIC->BindAction(DodgeAction, ETriggerEvent::Triggered, this, &AVremCharacter::Dodge);
 		}
 	}
 	else
