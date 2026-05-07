@@ -287,7 +287,7 @@ void AVremCharacter::TryBindInputByInputConfig()
 		const UInputAction* DodgeAction = CurrentInputConfig->FindInputActionByTag(FVremGameplayTags::Input_Dodge);
 		if (DodgeAction != nullptr)
 		{
-			EIC->BindAction(DodgeAction, ETriggerEvent::Triggered, this, &AVremCharacter::Dodge);
+			EIC->BindAction(DodgeAction, ETriggerEvent::Started, this, &AVremCharacter::Dodge);
 		}
 	}
 	else
