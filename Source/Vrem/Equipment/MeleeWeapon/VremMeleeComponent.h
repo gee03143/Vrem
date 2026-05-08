@@ -21,6 +21,14 @@ public:
     UFUNCTION(BlueprintCallable, Category="Vrem|MeleeWeapon")
     void TryMeleeAttack();
 
+    UFUNCTION(BlueprintCallable, Category="Vrem|MeleeWeapon")
+    void TryCancelMeleeAttack();
+
+    UFUNCTION(BlueprintPure, Category = "Vrem|MeleeWeapon")
+    bool IsAttacking() const { return bIsAttacking; }    // AttackDuration 중
+    UFUNCTION(BlueprintPure, Category = "Vrem|MeleeWeapon")
+    bool CanCancel() const { return bCanCancel; } // CancelTime ~ AttackDuration 사이
+
 protected:
     // 로컬 예측 실행 (쿨다운/콤보 로직 포함) → 서버에 요청
     void ExecuteMeleeAttack();
@@ -30,13 +38,17 @@ protected:
 
     UFUNCTION(NetMulticast, Unreliable)
     void MulticastOnMeleeAttack(int32 ComboIndex);
+
+    UFUNCTION(Server, Reliable)
+    void ServerCancelMeleeAttack();
+
+    UFUNCTION(NetMulticast, Unreliable)
+    void MulticastOnCancelMeleeAttack();
+
     void PlayMontageLocally(int32 ComboIndex);
+    void CancelMontageLocally();
     // 서버 히트 판정 (Sphere Trace)
     void PerformMeleeHitDetection(int32 ComboIndex);
-
-    // 쿨다운/콤보 상태
-    bool IsAttacking() const;    // AttackDuration 중
-    bool CanCancel() const; // CancelTime ~ AttackDuration 사이
 
     void OnAttackDurationFinished();  // 공격 모션 종료 시점
     void OnCancelTimeStarted();     // 지금부터 캔슬 후 다음 시퀸스 재생 가능

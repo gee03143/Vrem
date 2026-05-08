@@ -130,8 +130,18 @@ void AVremCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCompo
 	TryBindInputByInputConfig();
 }
 
+bool AVremCharacter::CanMove_Implementation() const
+{
+	return true;
+}
+
 void AVremCharacter::Move(const FInputActionValue& Value)
 {
+	if (CanMove() == false)
+	{
+		return;
+	}
+
 	FVector2D InputValue = Value.Get<FVector2D>();
 
 	if (IsValid(Controller) == false)

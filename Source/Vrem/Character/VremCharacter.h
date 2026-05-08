@@ -49,6 +49,9 @@ public:
 
 	UFUNCTION(BlueprintImplementableEvent, Category="Vrem|Input")
 	void OnDodgePressed();
+
+	UFUNCTION(BlueprintNativeEvent, BlueprintPure, Category="Vrem|Movement")
+    bool CanMove() const;
 protected:
 	void OnInputConfigLoaded(const UVremGameModeDefinition* InGameModeDefinition);
 	

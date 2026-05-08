@@ -34,16 +34,6 @@ AController* UVremMeleeComponent::GetInstigatorController() const
     return Pawn ? Pawn->GetController() : nullptr;
 }
 
-bool UVremMeleeComponent::IsAttacking() const
-{
-    return bIsAttacking;
-}
-
-bool UVremMeleeComponent::CanCancel() const
-{
-    return bCanCancel;
-}
-
 void UVremMeleeComponent::TryMeleeAttack()
 {
     if (IsValid(MeleeDefinition) == false)
@@ -65,6 +55,44 @@ void UVremMeleeComponent::TryMeleeAttack()
     }
 
     ExecuteMeleeAttack();
+}
+
+void UVremMeleeComponent::TryCancelMeleeAttack()
+{
+    if (bIsAttacking == false)
+    {
+        return;
+    }
+
+    if (CanCancel() == false)
+    {
+        return;
+    }
+
+    FTimerManager& TM = GetWorld()->GetTimerManager();
+    TM.ClearTimer(AttackDurationTimer);
+    TM.ClearTimer(CancelTimeTimer);
+    TM.ClearTimer(HitTimer);
+
+    bIsAttacking = false;
+    bCanCancel = false;
+    CurrentComboIndex = 0;
+
+    if (IVremWeaponHandler* Handler = Cast<IVremWeaponHandler>(GetWeaponOwner()))
+    {
+        Handler->OnMeleeAttackFinished();
+    }
+
+    AActor* Owner = GetOwner();
+    if (IsValid(Owner))
+    {
+        CancelMontageLocally();
+
+        if (Owner->GetLocalRole() == ROLE_AutonomousProxy)
+        {
+            ServerCancelMeleeAttack();
+        }
+    }
 }
 
 void UVremMeleeComponent::ExecuteMeleeAttack()
@@ -262,6 +290,31 @@ void UVremMeleeComponent::MulticastOnMeleeAttack_Implementation(int32 ComboIndex
     // MeleeDefinition->SwingSound, HitImpactEffect ½ºÆù
 }
 
+void UVremMeleeComponent::ServerCancelMeleeAttack_Implementation()
+{
+	FTimerManager& TimerManager = GetWorld()->GetTimerManager();
+    TimerManager.ClearTimer(AttackDurationTimer);
+    TimerManager.ClearTimer(CancelTimeTimer);
+    TimerManager.ClearTimer(HitTimer);
+
+    MulticastOnCancelMeleeAttack();
+}
+
+void UVremMeleeComponent::MulticastOnCancelMeleeAttack_Implementation()
+{
+    ACharacter* WeaponOwner = Cast<ACharacter>(GetWeaponOwner());
+    if (IsValid(WeaponOwner) == false)
+    {
+        UE_LOG(LogVremWeapon, Warning, TEXT("MulticastOnMeleeAttack_Implementation: WeaponOwner is invalid"));
+        return;
+    }
+
+    if (WeaponOwner->GetLocalRole() != ROLE_AutonomousProxy)
+    {
+        CancelMontageLocally();
+    }
+}
+
 void UVremMeleeComponent::PlayMontageLocally(int32 ComboIndex)
 {
     if (IsValid(MeleeDefinition) == false)
@@ -284,10 +337,21 @@ void UVremMeleeComponent::PlayMontageLocally(int32 ComboIndex)
         return;
     }
 
-    const float Length = WeaponOwner->PlayAnimMontage(Sequence->AttackMontage);
+    WeaponOwner->PlayAnimMontage(Sequence->AttackMontage);
 }
 
 
+void UVremMeleeComponent::CancelMontageLocally()
+{
+    ACharacter* WeaponOwner = Cast<ACharacter>(GetWeaponOwner());
+    if (IsValid(WeaponOwner) == false)
+    {
+        UE_LOG(LogVremWeapon, Warning, TEXT("PlayMontageLocally: WeaponOwner is Invalid or not character"));
+        return;
+    }
+
+    WeaponOwner->StopAnimMontage();
+}
 
 #if WITH_AUTOMATION_WORKER
 
