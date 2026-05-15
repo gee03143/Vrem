@@ -58,6 +58,9 @@ public:
 	UPROPERTY(EditDefaultsOnly, Category = "Animation")
     TSubclassOf<UAnimInstance> AnimLayerClass;
 
+    UPROPERTY(EditDefaultsOnly, Category = "Animation")
+    TObjectPtr<UAnimMontage> EquipMontage;
+
 	UPROPERTY(EditDefaultsOnly, Category = "Slot")
     EEquipmentSlotType SlotType = EEquipmentSlotType::Ranged;
 };

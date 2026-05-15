@@ -102,6 +102,15 @@ public:
 	UPROPERTY(EditDefaultsOnly, Category = "Effects")
 	TMap<TEnumAsByte<EPhysicalSurface>, TObjectPtr<UNiagaraSystem>> ImpactEffects;
 
+    UPROPERTY(EditDefaultsOnly, Category = "Animation")
+    TObjectPtr<UAnimMontage> FireMontage;
+
+    UPROPERTY(EditDefaultsOnly, Category = "Animation")
+    TObjectPtr<UAnimMontage> ReloadMontage;
+
+    UPROPERTY(EditDefaultsOnly, Category = "Animation")
+    TObjectPtr<UAnimMontage> DryFireMontage;
+
     UPROPERTY(EditDefaultsOnly, Category = "Recoil")
     FRecoilProfile RecoilProfile;
 

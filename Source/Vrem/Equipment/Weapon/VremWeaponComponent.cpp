@@ -11,6 +11,7 @@
 #include "NiagaraComponent.h"
 #include "GameplayTagAssetInterface.h"
 #include "VremWeaponHandlerInterface.h"
+#include "GameFramework/Character.h"
 
 static TAutoConsoleVariable<int32> CVarDebugCharacterShooting(
     TEXT("vrem.DebugCharacterShooting"),
@@ -100,6 +101,15 @@ void UVremWeaponComponent::ExecuteFire()
         FMath::DegreesToRadians(SpreadDegrees)
     );
 
+    AActor* WeaponOwner = GetWeaponOwner();
+    if (IsValid(WeaponOwner) && WeaponOwner->GetLocalRole() == ROLE_AutonomousProxy)
+    {
+        if (IsValid(WeaponDefinition))
+        {
+            PlayMontageLocally(WeaponDefinition->FireMontage);
+        }
+    }
+
 	ServerFire(ViewOrigin, ShootDirection);
 	StartFireCooldown();
 
@@ -173,6 +183,16 @@ void UVremWeaponComponent::MulticastOnFire_Implementation(const FWeaponFireResul
         {
             UNiagaraFunctionLibrary::SpawnSystemAtLocation(
                 this, ImpactFx, FireResult.HitLocation, FireResult.HitNormal.Rotation());
+        }
+    }
+
+    // 5. ¸ùÅ¸ÁÖ
+    AActor* WeaponOwner = GetWeaponOwner();
+    if (IsValid(WeaponOwner) && WeaponOwner->GetLocalRole() != ROLE_AutonomousProxy)
+    {
+        if (IsValid(WeaponDefinition))
+        {
+            PlayMontageLocally(WeaponDefinition->FireMontage);
         }
     }
 }
@@ -383,6 +403,37 @@ FVector UVremWeaponComponent::GetLogicalMuzzleLocation() const
     AActor* WeaponOwner = GetWeaponOwner();
 
     return IsValid(WeaponOwner) ? WeaponOwner->GetActorTransform().TransformPosition(ShootingOffset) : FVector::ZeroVector;
+}
+
+void UVremWeaponComponent::PlayMontageLocally(UAnimMontage* MontageToPlay)
+{
+    if (IsValid(WeaponDefinition) == false)
+    {
+        UE_LOG(LogVremWeapon, Warning, TEXT("PlayMontageLocally: WeaponDefinition is invalid"));
+        return;
+    }
+
+
+    ACharacter* WeaponOwner = Cast<ACharacter>(GetWeaponOwner());
+    if (IsValid(WeaponOwner) == false)
+    {
+        UE_LOG(LogVremWeapon, Warning, TEXT("PlayMontageLocally: WeaponOwner is Invalid or not character"));
+        return;
+    }
+
+    WeaponOwner->PlayAnimMontage(MontageToPlay);
+}
+
+void UVremWeaponComponent::CancelMontageLocally()
+{
+    ACharacter* WeaponOwner = Cast<ACharacter>(GetWeaponOwner());
+    if (IsValid(WeaponOwner) == false)
+    {
+        UE_LOG(LogVremWeapon, Warning, TEXT("PlayMontageLocally: WeaponOwner is Invalid or not character"));
+        return;
+    }
+
+    WeaponOwner->StopAnimMontage();
 }
 
 #if WITH_AUTOMATION_WORKER

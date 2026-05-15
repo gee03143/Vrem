@@ -27,7 +27,7 @@ struct FAttackSequence
 {
     GENERATED_BODY()
 
-    UPROPERTY(EditDefaultsOnly, Category = "Animation", meta = (ClampMin = "0.0"))
+    UPROPERTY(EditDefaultsOnly, Category = "Animation")
     TObjectPtr<UAnimMontage> AttackMontage;
 
     UPROPERTY(EditDefaultsOnly, Category = "Damage", meta = (ClampMin = "0.0"))

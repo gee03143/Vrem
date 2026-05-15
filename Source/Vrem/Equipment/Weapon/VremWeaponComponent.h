@@ -79,6 +79,8 @@ protected:
     // server only, 애니메이션이 반영되지 않은 논리적 사격 판정 시작점
     FVector GetLogicalMuzzleLocation() const;
 
+    void PlayMontageLocally(UAnimMontage* MontageToPlay);
+    void CancelMontageLocally();
 
 protected:
     UPROPERTY(EditDefaultsOnly)
