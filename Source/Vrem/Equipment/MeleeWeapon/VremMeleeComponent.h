@@ -7,6 +7,7 @@
 #include "VremMeleeComponent.generated.h"
 
 class UVremMeleeWeaponDefinition;
+class USkeletalMeshComponent;
 struct FAttackSequence;
 
 UCLASS( ClassGroup=(Custom), meta=(BlueprintSpawnableComponent) )
@@ -39,6 +40,9 @@ protected:
     UFUNCTION(NetMulticast, Unreliable)
     void MulticastOnMeleeAttack(int32 ComboIndex);
 
+    UFUNCTION(NetMulticast, Unreliable)
+    void MulticastOnMeleeHitConfirmed(int32 ComboIndex, AActor* HitActor, FVector_NetQuantize HitLocation, FVector_NetQuantizeNormal HitNormal);
+
     UFUNCTION(Server, Reliable)
     void ServerCancelMeleeAttack();
 
@@ -50,9 +54,13 @@ protected:
     // 서버 히트 판정 (Sphere Trace)
     void PerformMeleeHitDetection(int32 ComboIndex);
 
+    void PlayCameraShakeLocal(TSubclassOf<UCameraShakeBase> ShakeClass);
+
     void OnAttackDurationFinished();  // 공격 모션 종료 시점
     void OnCancelTimeStarted();     // 지금부터 캔슬 후 다음 시퀸스 재생 가능
     void OnHitTimeStarted();        // 지금 히트 판정 체크
+    void ApplyHitStop(AActor* Victim, float Scale, float Duration);
+    void RestoreHitStop();
 
     AController* GetInstigatorController() const;
     AActor* GetWeaponOwner() const;
@@ -69,8 +77,13 @@ private:
     FTimerHandle AttackDurationTimer;
     FTimerHandle CancelTimeTimer;
     FTimerHandle HitTimer;
+    FTimerHandle SwingShakeTimer;
 
     int32 LastAttackComboIndex = INDEX_NONE;
+
+    FTimerHandle HitStopRestoreTimer;
+    TWeakObjectPtr<AActor> HitStopAttacker;
+    TWeakObjectPtr<USkeletalMeshComponent> HitStopVictim;
 
 #if WITH_AUTOMATION_WORKER
 public:

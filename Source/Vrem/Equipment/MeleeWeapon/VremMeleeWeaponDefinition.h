@@ -7,6 +7,30 @@
 #include "VremMeleeWeaponDefinition.generated.h"
 
 class UAnimMontage;
+class USoundBase;
+class UNiagaraSystem;
+class UCameraShakeBase;
+
+USTRUCT(BlueprintType)
+struct FHitImpactData
+{
+    GENERATED_BODY()
+
+    UPROPERTY(EditDefaultsOnly)
+    TObjectPtr<UNiagaraSystem> HitImpactFX;
+
+    UPROPERTY(EditDefaultsOnly)
+    FVector HitImpactFXLocationOffset;
+
+    UPROPERTY(EditDefaultsOnly)
+    FRotator HitImpactFXRotationOffset;
+
+    UPROPERTY(EditDefaultsOnly)
+    FVector HitImpactFXScale = FVector(1.f);
+
+    UPROPERTY(EditDefaultsOnly)
+    TObjectPtr<USoundBase> HitImpactSound;
+};
 
 /*
 AttackMontage:  [─ swing ─][── return to idle ──]
@@ -54,10 +78,26 @@ struct FAttackSequence
     UPROPERTY(EditDefaultsOnly, Category = "Attack|Combo", meta=(ClampMin="0.0"))
     float CancelTime = 0.4f;
 
-    // TODO: 이펙트/사운드 에셋 확보 후 추가
-    // UPROPERTY(EditDefaultsOnly, Category = "Effects")
-    // TObjectPtr<USoundBase> SwingSound;
-    // TObjectPtr<UNiagaraSystem> HitImpactEffect;
+    UPROPERTY(EditDefaultsOnly, Category = "Effects")
+    TObjectPtr<USoundBase> SwingSound; 
+
+    UPROPERTY(EditDefaultsOnly, Category = "Effects")
+    FHitImpactData HitImpactData;
+
+    UPROPERTY(EditDefaultsOnly, Category = "HitStop", meta = (ClampMin="0.0"))
+    float HitStopDuration = 0.0f;
+
+    UPROPERTY(EditDefaultsOnly, Category = "HitStop", meta = (ClampMin = "0.0", ClampMax="1.0"))
+    float HitStopScale = 0.2f;
+
+    UPROPERTY(EditDefaultsOnly, Category = "CameraShake")
+    TSubclassOf<UCameraShakeBase> SwingCameraShake;
+
+    UPROPERTY(EditDefaultsOnly, Category = "CameraShake")
+    TSubclassOf<UCameraShakeBase> HitCameraShake;
+
+    UPROPERTY(EditDefaultsOnly, Category = "CameraShake", meta = (ClampMin = "0.0"))
+    float SwingShakeLeadTime = 0.05f;
 };
 
 USTRUCT(BlueprintType)

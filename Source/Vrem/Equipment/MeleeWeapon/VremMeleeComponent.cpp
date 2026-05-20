@@ -8,7 +8,11 @@
 #include "GameFramework/PlayerController.h"
 #include "GameFramework/Character.h"
 #include "DrawDebugHelpers.h"
+#include "Kismet/GameplayStatics.h"
+#include "NiagaraFunctionLibrary.h"
 #include "Vrem/Equipment/Weapon/VremWeaponHandlerInterface.h"
+#include "Components/SkeletalMeshComponent.h"
+#include "Camera/CameraShakeBase.h"
 
 // 디버그 CVar (무기 시스템과 네임스페이스 일관성 유지)
 static TAutoConsoleVariable<int32> CVarDebugMeleeAttack(
@@ -125,6 +129,15 @@ void UVremMeleeComponent::ExecuteMeleeAttack()
     if (IsValid(WeaponOwner) && WeaponOwner->GetLocalRole() == ROLE_AutonomousProxy)
     {
         PlayMontageLocally(CurrentComboIndex);
+
+        FTimerManager& TimerManager = GetWorld()->GetTimerManager();
+        TimerManager.ClearTimer(SwingShakeTimer);
+
+        const float SwingShakeFireTime = FMath::Max(0.001f, Sequence->HitTime - Sequence->SwingShakeLeadTime);
+
+        FTimerDelegate ShakeDelegate;
+        ShakeDelegate.BindUObject(this, &UVremMeleeComponent::PlayCameraShakeLocal, Sequence->SwingCameraShake);
+        TimerManager.SetTimer(SwingShakeTimer, ShakeDelegate, SwingShakeFireTime, false);
     }
 
     // 기존 타이머 클리어
@@ -180,6 +193,54 @@ void UVremMeleeComponent::OnHitTimeStarted()
     }
 
     PerformMeleeHitDetection(LastAttackComboIndex);
+}
+
+void UVremMeleeComponent::ApplyHitStop(AActor* Victim, float Scale, float Duration)
+{
+    AActor* Attacker = GetWeaponOwner();
+    if (IsValid(Attacker) == false)
+    {
+        return;
+    }
+
+    FTimerManager& TimerManager = GetWorld()->GetTimerManager();
+    TimerManager.ClearTimer(HitStopRestoreTimer);
+    RestoreHitStop();
+
+    Attacker->CustomTimeDilation = Scale;
+    HitStopAttacker = Attacker;
+
+    ACharacter* VictimChar = Cast<ACharacter>(Victim);
+    if (IsValid(VictimChar))
+    {
+        USkeletalMeshComponent* VictimMesh = VictimChar->GetMesh();
+        if (IsValid(VictimMesh))
+        {
+            VictimMesh->GlobalAnimRateScale = Scale;
+            HitStopVictim = VictimMesh;
+        }
+    }
+
+    FTimerDelegate RestoreDelegate;
+    RestoreDelegate.BindUObject(this, &UVremMeleeComponent::RestoreHitStop);
+    TimerManager.SetTimer(HitStopRestoreTimer, RestoreDelegate, Duration, false);
+}
+
+void UVremMeleeComponent::RestoreHitStop()
+{
+    if (HitStopAttacker.IsValid())
+    {
+        HitStopAttacker->CustomTimeDilation = 1.f;
+    }
+
+    if (HitStopVictim.IsValid())
+    {
+        HitStopVictim->GlobalAnimRateScale = 1.f;
+    }
+
+    HitStopAttacker.Reset();
+    HitStopVictim.Reset();
+    
 }
 
 void UVremMeleeComponent::ServerMeleeAttack_Implementation(int32 ComboIndex)
@@ -268,7 +329,31 @@ void UVremMeleeComponent::PerformMeleeHitDetection(int32 ComboIndex)
 
         UE_LOG(LogVremWeapon, Log, TEXT("Melee hit: %s (ComboIndex=%d, Damage=%.1f)"),
             *HitResult.GetActor()->GetName(), ComboIndex, Sequence->Damage);
+
+        MulticastOnMeleeHitConfirmed(ComboIndex, HitResult.GetActor(), HitResult.ImpactPoint, HitResult.ImpactNormal);
     }
+}
+
+void UVremMeleeComponent::PlayCameraShakeLocal(TSubclassOf<UCameraShakeBase> ShakeClass)
+{
+    if (ShakeClass == nullptr)
+    {
+        return;
+    }
+
+    APawn* Pawn = Cast<APawn>(GetWeaponOwner());
+    if (IsValid(Pawn) == false)
+    {
+        return;
+    }
+
+    APlayerController* PC = Cast<APlayerController>(Pawn->GetController());
+    if (IsValid(PC) == false)
+    {
+        return;
+    }
+
+    PC->ClientStartCameraShake(ShakeClass);
 }
 
 void UVremMeleeComponent::MulticastOnMeleeAttack_Implementation(int32 ComboIndex)
@@ -285,9 +370,72 @@ void UVremMeleeComponent::MulticastOnMeleeAttack_Implementation(int32 ComboIndex
         PlayMontageLocally(ComboIndex);
     }
 
+    if (IsValid(MeleeDefinition))
+    {
+        const FAttackSequence* Sequence = MeleeDefinition->GetSequenceAt(ComboIndex);
+        if (Sequence && IsValid(Sequence->SwingSound))
+        {
+            UGameplayStatics::SpawnSoundAttached(Sequence->SwingSound, WeaponOwner->GetRootComponent());
+        }
+    }
+}
 
-    // TODO: 이펙트/사운드 재생 (모든 클라이언트)
-    // MeleeDefinition->SwingSound, HitImpactEffect 스폰
+void UVremMeleeComponent::MulticastOnMeleeHitConfirmed_Implementation(int32 ComboIndex, AActor* HitActor, FVector_NetQuantize HitLocation, FVector_NetQuantizeNormal HitNormal)
+{
+    if (IsValid(MeleeDefinition) == false)
+    {
+        UE_LOG(LogVremWeapon, Warning, TEXT("MulticastOnMeleeHitConfirmed_Implementation: MeleeDefinition is invalid"));
+        return;
+    }
+
+    const FAttackSequence* Sequence = MeleeDefinition->GetSequenceAt(ComboIndex);
+    if (Sequence == nullptr)
+    {
+        UE_LOG(LogVremWeapon, Warning, TEXT("MulticastOnMeleeHitConfirmed_Implementation: No AttackSequence at Index : [%d]"), ComboIndex);
+        return;
+    }
+
+    UWorld* World = GetWorld();
+    if (IsValid(Sequence->HitImpactData.HitImpactFX))
+    {
+        const FQuat ImpactQuat = FVector(HitNormal).Rotation().Quaternion();
+        const FQuat OffsetQuat = Sequence->HitImpactData.HitImpactFXRotationOffset.Quaternion();
+        const FRotator FinalRotation = (ImpactQuat * OffsetQuat).Rotator();
+
+        UNiagaraFunctionLibrary::SpawnSystemAtLocation(
+            World,
+            Sequence->HitImpactData.HitImpactFX,
+            HitLocation + Sequence->HitImpactData.HitImpactFXLocationOffset,
+            FinalRotation,
+            Sequence->HitImpactData.HitImpactFXScale);
+    }
+
+    if (IsValid(Sequence->HitImpactData.HitImpactSound))
+    {
+        UGameplayStatics::PlaySoundAtLocation(World, Sequence->HitImpactData.HitImpactSound, HitLocation);
+    }
+
+    if (Sequence->HitCameraShake)
+    {
+        AActor* Attacker = GetWeaponOwner();
+        if (IsValid(Attacker) && Attacker->GetLocalRole() == ROLE_AutonomousProxy)
+        {
+            APawn* AttackerPawn = Cast<APawn>(Attacker);
+            if (IsValid(AttackerPawn))
+            {
+                APlayerController* PC = Cast<APlayerController>(AttackerPawn->GetController());
+                if (IsValid(PC))
+                {
+                    PlayCameraShakeLocal(Sequence->HitCameraShake);
+                }
+            }
+        }
+    }
+
+    if (Sequence->HitStopDuration > 0.f)
+    {
+        ApplyHitStop(HitActor, Sequence->HitStopScale, Sequence->HitStopDuration);
+    }
 }
 
 void UVremMeleeComponent::ServerCancelMeleeAttack_Implementation()
