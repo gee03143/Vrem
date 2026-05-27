@@ -77,6 +77,7 @@ void UVremMeleeComponent::TryCancelMeleeAttack()
     TM.ClearTimer(AttackDurationTimer);
     TM.ClearTimer(CancelTimeTimer);
     TM.ClearTimer(HitTimer);
+    TM.ClearTimer(SwingShakeTimer);
 
     bIsAttacking = false;
     bCanCancel = false;
