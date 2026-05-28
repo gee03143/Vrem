@@ -115,7 +115,7 @@ void UVremSkillComponent::BeginPlay()
 	{
 		for (int32 i = 0; i < DefaultGrantedSkills.Num(); ++i)
 		{
-			AddSkill(DefaultGrantedSkills[i], i);
+			AddSkill(DefaultGrantedSkills[i], i + 1 /* Skill slot 1 == input Skill1 */);
 		}
 	}
 }

@@ -245,8 +245,20 @@ void AVremCharacter::Dodge(const FInputActionValue& Value)
 	OnDodgePressed();
 }
 
+void AVremCharacter::Skill1(const FInputActionValue& Value)
+{
+	OnSkill1Pressed();
+}
+
+void AVremCharacter::Skill2(const FInputActionValue& Value)
+{
+	OnSkill2Pressed();
+}
+
 void AVremCharacter::TryBindInputByInputConfig()
 {
+	// TODO : InputManager로 GameplayTag - BP Event 매핑 관리
+
 	if (CurrentInputConfig.IsValid() == false)
 	{
 		UE_LOG(LogVremInput, Warning, TEXT("AVremCharacter::SetupPlayerInputComponent InputConfig Is Invalid! NetRole : [%s]"), *GetNetRoleString(this));
@@ -298,6 +310,18 @@ void AVremCharacter::TryBindInputByInputConfig()
 		if (DodgeAction != nullptr)
 		{
 			EIC->BindAction(DodgeAction, ETriggerEvent::Started, this, &AVremCharacter::Dodge);
+		}
+
+		const UInputAction* Skill1Action = CurrentInputConfig->FindInputActionByTag(FVremGameplayTags::Input_Skill_1);
+		if (Skill1Action != nullptr)
+		{
+			EIC->BindAction(Skill1Action, ETriggerEvent::Started, this, &AVremCharacter::Skill1);
+		}
+
+		const UInputAction* Skill2Action = CurrentInputConfig->FindInputActionByTag(FVremGameplayTags::Input_Skill_2);
+		if (Skill2Action != nullptr)
+		{
+			EIC->BindAction(Skill2Action, ETriggerEvent::Started, this, &AVremCharacter::Skill2);
 		}
 	}
 	else

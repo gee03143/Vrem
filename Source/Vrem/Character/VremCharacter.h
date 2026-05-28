@@ -50,6 +50,12 @@ public:
 	UFUNCTION(BlueprintImplementableEvent, Category="Vrem|Input")
 	void OnDodgePressed();
 
+	UFUNCTION(BlueprintImplementableEvent, Category="Vrem|Input")
+	void OnSkill1Pressed();
+
+	UFUNCTION(BlueprintImplementableEvent, Category="Vrem|Input")
+	void OnSkill2Pressed();
+
 	UFUNCTION(BlueprintNativeEvent, BlueprintPure, Category="Vrem|Movement")
     bool CanMove() const;
 protected:
@@ -64,6 +70,8 @@ protected:
 	void StopAttack_Temp(const FInputActionValue& Value);		// 임시.. 아마 무기 기능같은곳에 들어가야할거같음, 추후 무기 프라이머리 기능으로 들어갈 것
 	void ToggleADS(const FInputActionValue& Value);	
 	void Dodge(const FInputActionValue& Value);
+	void Skill1(const FInputActionValue& Value);
+	void Skill2(const FInputActionValue& Value);
 
 	void TryBindInputByInputConfig();
 protected:
