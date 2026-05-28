@@ -103,6 +103,7 @@ protected:
     virtual void InitializeComponent() override;
     virtual void BeginPlay() override;
     virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
+    virtual void TickComponent(float DeltaTime, enum ELevelTick TickType, FActorComponentTickFunction *ThisTickFunction) override;
 
     // Blueprint API
 public:
@@ -112,11 +113,19 @@ public:
     UFUNCTION(BlueprintCallable, Category = "Vrem|Skill")
     void RequestRemoveSkill(int32 InSlotIndex);
 
+    // Targeting
+    UFUNCTION(BlueprintCallable, Category = "Vrem|Skill")
+    void RequestCancelTargeting();
+
     // Activation
     UFUNCTION(BlueprintCallable, Category = "Vrem|Skill")
     void RequestActivateSkill(int32 SlotIndex);
 
     // Query
+    UFUNCTION(BlueprintPure, Category = "Vrem|Skill")
+    bool IsTargeting() const { return CurrentTargetingSlotIndex != INDEX_NONE; }
+    UFUNCTION(BlueprintPure, Category = "Vrem|Skill")
+    int32 GetTargetingSlotIndex() const { return CurrentTargetingSlotIndex; }
     UFUNCTION(BlueprintPure, Category = "Vrem|Skill")
     bool CanActivateSkill(int32 SlotIndex) const;
     UFUNCTION(BlueprintPure, Category = "Vrem|Skill")
@@ -145,8 +154,12 @@ public:
 	void RemoveSkill(int32 InSlotIndex);
 
 protected:
-	void ExecuteActivateSkill(int32 SlotIndex);
+	void ExecuteActivateSkill(int32 SlotIndex, const FVremSkillActivationContext& Context);
     void StartCooldownLocal(int32 SlotIndex);
+
+    void BeginTargetingLocal(int32 SlotIndex);
+    void ConfirmTargetingLocal();
+    void CancelTargetingLocal();
 
     void NotifySkillListChanged() { OnSkillListChanged.Broadcast(); }
 protected:
@@ -164,4 +177,7 @@ protected:
 private:
 	UPROPERTY(ReplicatedUsing = OnRep_SkillList)
     FSkillList SkillList;
+
+    int32 CurrentTargetingSlotIndex = INDEX_NONE;
+    FVremSkillActivationContext CurrentTargetingContext;
 };

@@ -8,6 +8,14 @@
 
 class UTexture2D;
 class UVremSkillBehavior;
+
+UENUM(BlueprintType)
+enum class EVremSkillActivationMode : uint8
+{
+	Instant,
+	Targeting
+};
+
 /**
  * 
  */
@@ -28,6 +36,9 @@ public:
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Vrem|Skill")
     TSubclassOf<UVremSkillBehavior> BehaviorClass;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Vrem|Skill")
+	EVremSkillActivationMode ActivationMode = EVremSkillActivationMode::Instant;
 
 public:
 	const UVremSkillBehavior* GetBehaviorCDO() const;

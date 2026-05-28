@@ -96,7 +96,8 @@ void FSkillList::PreReplicatedRemove(const TArrayView<int32>& RemovedIndices, in
 // =======================================
 UVremSkillComponent::UVremSkillComponent()
 {
-	PrimaryComponentTick.bCanEverTick = false;
+	PrimaryComponentTick.bCanEverTick = true;
+	PrimaryComponentTick.bStartWithTickEnabled = false;
     SetIsReplicatedByDefault(true);
 	bWantsInitializeComponent = true;
 }
@@ -125,6 +126,37 @@ void UVremSkillComponent::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& 
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 
 	DOREPLIFETIME_CONDITION(UVremSkillComponent, SkillList, COND_OwnerOnly);
+}
+
+void UVremSkillComponent::TickComponent(float DeltaTime, enum ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction)
+{
+	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
+
+	if (CurrentTargetingSlotIndex == INDEX_NONE)
+	{
+		return;
+	}
+
+	const FSkillEntry* Entry = SkillList.GetEntryFromIndex(CurrentTargetingSlotIndex);
+	if (Entry == nullptr)
+	{
+		CancelTargetingLocal();
+		return;
+	}
+
+	const UVremSkillDefinition* Def = Entry->SkillDefinition.Get();
+	if (IsValid(Def) == false)
+	{
+		return;
+	}
+
+	CurrentTargetingContext = BuildActivationContext();   // 조준 위치/방향 갱신
+
+	const UVremSkillBehavior* CDO = Def->GetBehaviorCDO();
+	if (IsValid(CDO))
+	{
+		CDO->UpdateTargeting(CurrentTargetingContext, Def);
+	}
 }
 
 void UVremSkillComponent::RequestAddSkill(const UVremSkillDefinition* InSkillDefinition, int32 InSlotIndex)
@@ -163,14 +195,49 @@ void UVremSkillComponent::RequestRemoveSkill(int32 InSlotIndex)
 	}
 }
 
+void UVremSkillComponent::RequestCancelTargeting()
+{
+	CancelTargetingLocal();
+}
+
 void UVremSkillComponent::RequestActivateSkill(int32 SlotIndex)
 {
+	if (CurrentTargetingSlotIndex == SlotIndex)
+	{
+		ConfirmTargetingLocal();
+		return;
+	}
+
+	if (CurrentTargetingSlotIndex != INDEX_NONE)
+	{
+		CancelTargetingLocal();
+	}
+
 	if (CanActivateSkill(SlotIndex) == false)
 	{
 		return;
 	}
 
-	ExecuteActivateSkill(SlotIndex);
+	const FSkillEntry* Entry = SkillList.GetEntryFromIndex(SlotIndex);
+	if (Entry == nullptr)
+	{
+		return;
+	}
+	const UVremSkillDefinition* Def = Entry->SkillDefinition.Get();
+	if (IsValid(Def) == false)
+	{
+		return;
+	}
+
+	if (Def->ActivationMode == EVremSkillActivationMode::Instant)
+	{
+		const FVremSkillActivationContext Context = BuildActivationContext();
+		ExecuteActivateSkill(SlotIndex, Context);
+	}
+	else // EVremSkillActivationMode::Targeting
+	{
+		BeginTargetingLocal(SlotIndex);
+	}
 }
 
 bool UVremSkillComponent::CanActivateSkill(int32 SlotIndex) const
@@ -264,15 +331,13 @@ void UVremSkillComponent::RemoveSkill(int32 InSlotIndex)
 	OnSkillListChanged.Broadcast();
 }
 
-void UVremSkillComponent::ExecuteActivateSkill(int32 SlotIndex)
+void UVremSkillComponent::ExecuteActivateSkill(int32 SlotIndex, const FVremSkillActivationContext& Context)
 {
 	const FSkillEntry* Entry = SkillList.GetEntryFromIndex(SlotIndex);
 	if (Entry == nullptr)
 	{
 		return;
 	}
-
-	const FVremSkillActivationContext Context = BuildActivationContext();
 
 	ServerActivateSkill(SlotIndex, Context.AimLocation, Context.AimDirection);
 
@@ -293,6 +358,93 @@ void UVremSkillComponent::StartCooldownLocal(int32 SlotIndex)
 	{
 		Entry->CooldownEndTime = GetWorld()->GetTimeSeconds() + Def->Cooldown;
 	}
+}
+
+void UVremSkillComponent::BeginTargetingLocal(int32 SlotIndex)
+{
+	const FSkillEntry* Entry = SkillList.GetEntryFromIndex(SlotIndex);
+	if (Entry == nullptr)
+	{
+		return;
+	}
+	const UVremSkillDefinition* Def = Entry->SkillDefinition.Get();
+	if (IsValid(Def) == false || Def->BehaviorClass == nullptr)
+	{
+		return;
+	}
+
+	CurrentTargetingSlotIndex = SlotIndex;
+	CurrentTargetingContext = BuildActivationContext();
+
+	const UVremSkillBehavior* CDO = Def->GetBehaviorCDO();
+	if (IsValid(CDO))
+	{
+		CDO->BeginTargeting(CurrentTargetingContext, Def);
+	}
+
+	SetComponentTickEnabled(true);
+}
+
+void UVremSkillComponent::ConfirmTargetingLocal()
+{
+	if (CurrentTargetingSlotIndex == INDEX_NONE)
+	{
+		return;
+	}
+
+	const int32 SlotIndex = CurrentTargetingSlotIndex;
+	const FSkillEntry* Entry = SkillList.GetEntryFromIndex(SlotIndex);
+	if (Entry == nullptr)
+	{
+		CancelTargetingLocal();
+		return;
+	}
+	const UVremSkillDefinition* Def = Entry->SkillDefinition.Get();
+	if (IsValid(Def) == false)
+	{
+		CancelTargetingLocal();
+		return;
+	}
+
+	CurrentTargetingContext = BuildActivationContext();   // 확정 시점 갱신
+
+	const UVremSkillBehavior* CDO = Def->GetBehaviorCDO();
+	if (IsValid(CDO))
+	{
+		CDO->EndTargeting(CurrentTargetingContext, Def, true /*bConfirmed*/);
+	}
+
+	// 상태 정리 후 실제 발동
+	const FVremSkillActivationContext FinalContext = CurrentTargetingContext;
+	CurrentTargetingSlotIndex = INDEX_NONE;
+	SetComponentTickEnabled(false);
+
+	ExecuteActivateSkill(SlotIndex, FinalContext);
+}
+
+void UVremSkillComponent::CancelTargetingLocal()
+{
+	if (CurrentTargetingSlotIndex == INDEX_NONE)
+	{
+		return;
+	}
+
+	const FSkillEntry* Entry = SkillList.GetEntryFromIndex(CurrentTargetingSlotIndex);
+	if (Entry != nullptr)
+	{
+		const UVremSkillDefinition* Def = Entry->SkillDefinition.Get();
+		if (IsValid(Def) && Def->BehaviorClass != nullptr)
+		{
+			const UVremSkillBehavior* CDO = Def->GetBehaviorCDO();
+			if (IsValid(CDO))
+			{
+				CDO->EndTargeting(CurrentTargetingContext, Def, false /*bConfirmed*/);
+			}
+		}
+	}
+
+	CurrentTargetingSlotIndex = INDEX_NONE;
+	SetComponentTickEnabled(false);
 }
 
 void UVremSkillComponent::OnRep_SkillList()
