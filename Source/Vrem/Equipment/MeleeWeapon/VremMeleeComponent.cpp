@@ -92,8 +92,11 @@ void UVremMeleeComponent::TryCancelMeleeAttack()
     if (IsValid(Owner))
     {
         CancelMontageLocally();
-
-        if (Owner->GetLocalRole() == ROLE_AutonomousProxy)
+        if (Owner->HasAuthority())
+        {
+            DoCancelMeleeAttack();
+        }
+        else if (Owner->GetLocalRole() == ROLE_AutonomousProxy)
         {
             ServerCancelMeleeAttack();
         }
@@ -126,8 +129,8 @@ void UVremMeleeComponent::ExecuteMeleeAttack()
     bIsAttacking = true;
     bCanCancel = false;
 
-    AActor* WeaponOwner = GetWeaponOwner();
-    if (IsValid(WeaponOwner) && WeaponOwner->GetLocalRole() == ROLE_AutonomousProxy)
+    APawn* WeaponOwner = Cast<APawn>(GetWeaponOwner());
+    if (IsValid(WeaponOwner) && WeaponOwner->IsLocallyControlled())
     {
         PlayMontageLocally(CurrentComboIndex);
 
@@ -366,7 +369,9 @@ void UVremMeleeComponent::MulticastOnMeleeAttack_Implementation(int32 ComboIndex
         return;
     }
 
-    if (WeaponOwner->GetLocalRole() != ROLE_AutonomousProxy)
+    APawn* OwnerPawn = Cast<APawn>(WeaponOwner);
+    const bool bIsLocal = IsValid(OwnerPawn) && OwnerPawn->IsLocallyControlled();
+    if (IsValid(OwnerPawn) && OwnerPawn->IsLocallyControlled() == false)
     {
         PlayMontageLocally(ComboIndex);
     }
@@ -419,10 +424,11 @@ void UVremMeleeComponent::MulticastOnMeleeHitConfirmed_Implementation(int32 Comb
     if (Sequence->HitCameraShake)
     {
         AActor* Attacker = GetWeaponOwner();
-        if (IsValid(Attacker) && Attacker->GetLocalRole() == ROLE_AutonomousProxy)
+        if (IsValid(Attacker))
         {
             APawn* AttackerPawn = Cast<APawn>(Attacker);
-            if (IsValid(AttackerPawn))
+            const bool bIsLocal = IsValid(AttackerPawn) && AttackerPawn->IsLocallyControlled();
+            if (bIsLocal)
             {
                 APlayerController* PC = Cast<APlayerController>(AttackerPawn->GetController());
                 if (IsValid(PC))
@@ -458,7 +464,9 @@ void UVremMeleeComponent::MulticastOnCancelMeleeAttack_Implementation()
         return;
     }
 
-    if (WeaponOwner->GetLocalRole() != ROLE_AutonomousProxy)
+    APawn* OwnerPawn = Cast<APawn>(WeaponOwner);
+    const bool bIsLocal = IsValid(OwnerPawn) && OwnerPawn->IsLocallyControlled();
+    if (bIsLocal == false)
     {
         CancelMontageLocally();
     }

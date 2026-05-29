@@ -101,8 +101,8 @@ void UVremWeaponComponent::ExecuteFire()
         FMath::DegreesToRadians(SpreadDegrees)
     );
 
-    AActor* WeaponOwner = GetWeaponOwner();
-    if (IsValid(WeaponOwner) && WeaponOwner->GetLocalRole() == ROLE_AutonomousProxy)
+    APawn* WeaponOwner = Cast<APawn>(GetWeaponOwner());
+    if (IsValid(WeaponOwner) && WeaponOwner->IsLocallyControlled())
     {
         if (IsValid(WeaponDefinition))
         {
@@ -187,8 +187,8 @@ void UVremWeaponComponent::MulticastOnFire_Implementation(const FWeaponFireResul
     }
 
     // 5. ¸ùÅ¸ÁÖ
-    AActor* WeaponOwner = GetWeaponOwner();
-    if (IsValid(WeaponOwner) && WeaponOwner->GetLocalRole() != ROLE_AutonomousProxy)
+    APawn* WeaponOwner = Cast<APawn>(GetWeaponOwner());
+    if (IsValid(WeaponOwner) && WeaponOwner->IsLocallyControlled() == false)
     {
         if (IsValid(WeaponDefinition))
         {

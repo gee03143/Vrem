@@ -54,8 +54,13 @@ void UVremDodgeComponent::ExecuteDodge(EDodgeDirection Direction)
 	AActor* Owner = GetOwner();
 	if (IsValid(Owner) && Owner->GetLocalRole() == ROLE_AutonomousProxy)
 	{
-		PlayMontageLocally(Sequence);
 		ApplyDodgeForce(Sequence, Direction);
+	}
+
+	APawn* OwnerPawn = Cast<APawn>(Owner);
+	if (IsValid(OwnerPawn) && OwnerPawn->IsLocallyControlled())
+	{
+		PlayMontageLocally(Sequence);
 	}
 
 	bIsDodging = true;
@@ -91,9 +96,10 @@ void UVremDodgeComponent::MulticastOnDodge_Implementation(EDodgeDirection Direct
 		return;
 	}
 
-	if (Owner->GetLocalRole() == ROLE_AutonomousProxy)
+	APawn* OwnerPawn = Cast<APawn>(Owner);
+	if (IsValid(OwnerPawn) && OwnerPawn->IsLocallyControlled())
 	{
-		// autonomousproxy는 이미 몽타주 재생함
+		// 이미 ExecuteDodge에서 몽타주 재생함
 		return;
 	}
 
