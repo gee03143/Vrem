@@ -447,12 +447,7 @@ void UVremMeleeComponent::MulticastOnMeleeHitConfirmed_Implementation(int32 Comb
 
 void UVremMeleeComponent::ServerCancelMeleeAttack_Implementation()
 {
-	FTimerManager& TimerManager = GetWorld()->GetTimerManager();
-    TimerManager.ClearTimer(AttackDurationTimer);
-    TimerManager.ClearTimer(CancelTimeTimer);
-    TimerManager.ClearTimer(HitTimer);
-
-    MulticastOnCancelMeleeAttack();
+    DoCancelMeleeAttack();
 }
 
 void UVremMeleeComponent::MulticastOnCancelMeleeAttack_Implementation()
@@ -470,6 +465,18 @@ void UVremMeleeComponent::MulticastOnCancelMeleeAttack_Implementation()
     {
         CancelMontageLocally();
     }
+}
+
+void UVremMeleeComponent::DoCancelMeleeAttack()
+{
+    check(GetOwner()->HasAuthority());
+
+    FTimerManager& TimerManager = GetWorld()->GetTimerManager();
+    TimerManager.ClearTimer(AttackDurationTimer);
+    TimerManager.ClearTimer(CancelTimeTimer);
+    TimerManager.ClearTimer(HitTimer);
+
+    MulticastOnCancelMeleeAttack();
 }
 
 void UVremMeleeComponent::PlayMontageLocally(int32 ComboIndex)

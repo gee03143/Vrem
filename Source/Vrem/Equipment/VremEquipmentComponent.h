@@ -106,6 +106,8 @@ struct FEquipmentList : public FFastArraySerializer
 		return INDEX_NONE;
 	}
 
+	int32 GetNextSlotIndexWithSameType(EEquipmentSlotType InSlotType, int32 StartIndex = 0) const;
+
 	void AddEntry(const UVremEquipmentDefinition* InEquipmentDefinition, int32 InIndex);
 	void RemoveEntry(int32 InIndex);
 	int32 GetNumEntries() const { return Entries.Num(); }
@@ -175,7 +177,7 @@ public:
 public:
 	// Blueprint API
     UFUNCTION(BlueprintCallable, Category="Vrem|Equipment")
-    void RequestSetCurrentWeapon(int32 InSlotIndex, EEquipmentState PrevOnHandDest = EEquipmentState::Stowed);
+    void RequestSetCurrentWeapon(int32 InSlotIndex, EEquipmentState PrevOnHandDest = EEquipmentState::Stowed, bool bSkipEquipMontage = false);
 
 	UFUNCTION(BlueprintCallable, Category="Vrem|Equipment")
     void RequestEquipItemByInstance(const UVremItemInstance* ItemToEquip, int32 InSlotIndex);
@@ -200,8 +202,10 @@ public:
 	int32 GetHolsteredSlotIndex() const;
 	UFUNCTION(BlueprintPure, Category="Vrem|Equipment")
 	EEquipmentSlotType GetOnHandSlotType() const;
+	UFUNCTION(BlueprintPure, Category="Vrem|Equipment")
+	int32 GetNextSlotIndexWithSameType(EEquipmentSlotType InSlotType, int32 StartIndex = 0) const;
 public:
-	void SetCurrentWeapon(int32 InWeaponSlotIndex, EEquipmentState PrevOnHandDest = EEquipmentState::Stowed);
+	void SetCurrentWeapon(int32 InWeaponSlotIndex, EEquipmentState PrevOnHandDest = EEquipmentState::Stowed, bool bSkipEquipMontage = false);
 	void TryEquipItem(const UVremEquipmentDefinition* ItemToEquip, int32 InSlotIndex);
 	void TryUnequipItem(int32 InSlotIndex);
 	void TryUnequipItem(const UVremEquipmentDefinition* InEquipmentDefinition);
@@ -217,7 +221,10 @@ public:
 	void ServerTryUnequipItem(int32 InSlotIndex);
 
 	UFUNCTION(Server, Reliable)
-	void ServerSetCurrentWeapon(int32 InSlotIndex, EEquipmentState PrevOnHandDest = EEquipmentState::Stowed);
+	void ServerSetCurrentWeapon(int32 InSlotIndex, EEquipmentState PrevOnHandDest = EEquipmentState::Stowed, bool bSkipEquipMontage = false);
+
+	UFUNCTION(NetMulticast, Unreliable)
+	void MulticastPlayEquipMontage(const UVremEquipmentDefinition* ItemToEquip);
 
 protected:
 	void OnInstanceStateChanged(EEquipmentState NewState, TSubclassOf<UAnimInstance> AnimLayerClass);

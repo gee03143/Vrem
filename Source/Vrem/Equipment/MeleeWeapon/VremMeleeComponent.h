@@ -49,6 +49,7 @@ protected:
     UFUNCTION(NetMulticast, Unreliable)
     void MulticastOnCancelMeleeAttack();
 
+    void DoCancelMeleeAttack();
     void PlayMontageLocally(int32 ComboIndex);
     void CancelMontageLocally();
     // 서버 히트 판정 (Sphere Trace)

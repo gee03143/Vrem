@@ -5,8 +5,11 @@
 #include "VremEquipmentActor.h"
 #include "ItemFragment_Equipment.h"
 #include "Net/UnrealNetwork.h"
-#include "Vrem/VremLogChannels.h"
 #include "UObject/TopLevelAssetPath.h"
+#include "GameFramework/Character.h"
+#include "GameplayTagAssetInterface.h"
+#include "Vrem/VremLogChannels.h"
+#include "Vrem/VremGameplayTags.h"
 
 FString FEquipmentEntry::ToString() const
 {
@@ -59,6 +62,41 @@ void FEquipmentList::SetOwner(UVremEquipmentComponent* InOwner)
 			}
 		}
 	}
+}
+
+int32 FEquipmentList::GetNextSlotIndexWithSameType(EEquipmentSlotType InSlotType, int32 StartIndex /*= 0*/) const
+{
+	// 1. 같은 SlotType 의 EquipmentIndex 수집
+	TArray<int32> Matching;
+	Matching.Reserve(Entries.Num());
+
+	for (const FEquipmentEntry& E : Entries)
+	{
+		if (E.EquipmentDefiniton.IsValid() && E.EquipmentDefiniton->SlotType == InSlotType)
+		{
+			Matching.Add(E.EquipmentIndex);
+		}
+	}
+
+	if (Matching.Num() == 0)
+	{
+		return INDEX_NONE;
+	}
+
+	// 2. 인덱스 오름차순 정렬 (Entries 순서 보장 없음)
+	Matching.Sort();
+
+	// 3. StartIndex 보다 큰 첫 인덱스
+	for (int32 Idx : Matching)
+	{
+		if (Idx > StartIndex)
+		{
+			return Idx;
+		}
+	}
+
+	// 4. 끝까지 없으면 wrap → 첫 매칭
+	return Matching[0];
 }
 
 void FEquipmentList::AddEntry(const UVremEquipmentDefinition* InEquipmentDefinition, int32 InIndex)
@@ -289,15 +327,15 @@ void UVremEquipmentComponent::InitializeComponent()
 	EquipmentList.SetOwner(this);
 }
 
-void UVremEquipmentComponent::RequestSetCurrentWeapon(int32 InSlotIndex, EEquipmentState PrevOnHandDest /*= EEquipmentState::Stowed*/)
+void UVremEquipmentComponent::RequestSetCurrentWeapon(int32 InSlotIndex, EEquipmentState PrevOnHandDest /*= EEquipmentState::Stowed*/, bool bSkipEquipMontage /*= false*/)
 {
 	if (IsValid(GetOwner()) && GetOwner()->HasAuthority())
 	{
-		SetCurrentWeapon(InSlotIndex, PrevOnHandDest);
+		SetCurrentWeapon(InSlotIndex, PrevOnHandDest, bSkipEquipMontage);
 	}
 	else
 	{
-		ServerSetCurrentWeapon(InSlotIndex, PrevOnHandDest);
+		ServerSetCurrentWeapon(InSlotIndex, PrevOnHandDest, bSkipEquipMontage);
 	}
 }
 
@@ -361,7 +399,7 @@ TArray<FVremEquipmentSlotView> UVremEquipmentComponent::GetEquipmentEntries() co
 	return EquipmentList.CollectEntryViews();
 }
 
-void UVremEquipmentComponent::SetCurrentWeapon(int32 InWeaponSlotIndex, EEquipmentState PrevOnHandDest)
+void UVremEquipmentComponent::SetCurrentWeapon(int32 InWeaponSlotIndex, EEquipmentState PrevOnHandDest, bool bSikipEquipMontage)
 {
 	check(IsValid(GetOwner()));
 	check(GetOwner()->HasAuthority());
@@ -400,6 +438,11 @@ void UVremEquipmentComponent::SetCurrentWeapon(int32 InWeaponSlotIndex, EEquipme
 	EquipmentList.MarkItemDirty(*NewEntry);
 
 	OnEquipmentUpdated.Broadcast();
+
+	if (bSikipEquipMontage == false && NewEntry->EquipmentDefiniton.IsValid())
+	{
+		MulticastPlayEquipMontage(NewEntry->EquipmentDefiniton.Get());
+	}
 }
 
 AVremEquipmentActor* UVremEquipmentComponent::GetCurrentEquipmentActor() const
@@ -462,9 +505,46 @@ void UVremEquipmentComponent::ServerTryUnequipItem_Implementation(int32 InSlotIn
 	TryUnequipItem(InSlotIndex);
 }
 
-void UVremEquipmentComponent::ServerSetCurrentWeapon_Implementation(int32 InSlotIndex, EEquipmentState PrevOnHandDest)
+void UVremEquipmentComponent::ServerSetCurrentWeapon_Implementation(int32 InSlotIndex, EEquipmentState PrevOnHandDest /*= EEquipmentState::Stowed*/, bool bSkipEquipMontage /*= false*/)
 {
-	SetCurrentWeapon(InSlotIndex, PrevOnHandDest);
+	SetCurrentWeapon(InSlotIndex, PrevOnHandDest, bSkipEquipMontage);
+}
+
+void UVremEquipmentComponent::MulticastPlayEquipMontage_Implementation(const UVremEquipmentDefinition* ItemToEquip)
+{
+	if (GetNetMode() == NM_DedicatedServer)
+	{
+		return;
+	}
+
+	const FEquipmentEntry* Entry = EquipmentList.GetEntryFromEquipmentState(EEquipmentState::OnHand);
+	if (Entry == nullptr || Entry->EquipmentDefiniton.IsValid() == false)
+	{
+		return;
+	}
+
+	UAnimMontage* EquipMontage = Entry->EquipmentDefiniton->EquipMontage;
+	if (IsValid(EquipMontage) == false)
+	{
+		return;
+	}
+
+	const ACharacter* OwnerCharacter = Cast<ACharacter>(GetOwner());
+	if (IsValid(OwnerCharacter) == false)
+	{
+		UE_LOG(LogVremEquipment, Warning, TEXT("PlayEquipMontage: Owner is not a Character"));
+		return;
+	}
+
+	USkeletalMeshComponent* Mesh = OwnerCharacter->GetMesh();
+	UAnimInstance* AnimInstance = IsValid(Mesh) ? Mesh->GetAnimInstance() : nullptr;
+	if (IsValid(AnimInstance) == false)
+	{
+		UE_LOG(LogVremEquipment, Warning, TEXT("PlayEquipMontage: AnimInstance is invalid"));
+		return;
+	}
+
+	AnimInstance->Montage_Play(EquipMontage);
 }
 
 void UVremEquipmentComponent::OnInstanceStateChanged(EEquipmentState NewState, TSubclassOf<UAnimInstance> AnimLayerClass)
@@ -508,6 +588,11 @@ EEquipmentSlotType UVremEquipmentComponent::GetOnHandSlotType() const
 {
 	const FEquipmentEntry* Entry = EquipmentList.GetEntryFromEquipmentState(EEquipmentState::OnHand);
 	return Entry ? Entry->EquipmentDefiniton->SlotType : EEquipmentSlotType::NUM_EEquipmentSlotType;
+}
+
+int32 UVremEquipmentComponent::GetNextSlotIndexWithSameType(EEquipmentSlotType InSlotType, int32 StartIndex) const
+{
+	return EquipmentList.GetNextSlotIndexWithSameType(InSlotType, StartIndex);
 }
 
 #if WITH_AUTOMATION_WORKER
