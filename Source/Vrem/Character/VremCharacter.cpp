@@ -255,6 +255,11 @@ void AVremCharacter::Skill2(const FInputActionValue& Value)
 	OnSkill2Pressed();
 }
 
+void AVremCharacter::WeaponSwap(const FInputActionValue& Value)
+{
+	OnWeaponSwapPressed();
+}
+
 void AVremCharacter::TryBindInputByInputConfig()
 {
 	// TODO : InputManager로 GameplayTag - BP Event 매핑 관리
@@ -322,6 +327,12 @@ void AVremCharacter::TryBindInputByInputConfig()
 		if (Skill2Action != nullptr)
 		{
 			EIC->BindAction(Skill2Action, ETriggerEvent::Started, this, &AVremCharacter::Skill2);
+		}
+
+		const UInputAction* WeaponSwapAction = CurrentInputConfig->FindInputActionByTag(FVremGameplayTags::Input_Weapon_Swap);
+		if (WeaponSwapAction != nullptr)
+		{
+			EIC->BindAction(WeaponSwapAction, ETriggerEvent::Started, this, &AVremCharacter::WeaponSwap);
 		}
 	}
 	else
