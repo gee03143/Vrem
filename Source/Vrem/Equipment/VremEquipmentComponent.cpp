@@ -399,7 +399,7 @@ TArray<FVremEquipmentSlotView> UVremEquipmentComponent::GetEquipmentEntries() co
 	return EquipmentList.CollectEntryViews();
 }
 
-void UVremEquipmentComponent::SetCurrentWeapon(int32 InWeaponSlotIndex, EEquipmentState PrevOnHandDest, bool bSikipEquipMontage)
+void UVremEquipmentComponent::SetCurrentWeapon(int32 InWeaponSlotIndex, EEquipmentState PrevOnHandDest, bool bSkipEquipMontage)
 {
 	check(IsValid(GetOwner()));
 	check(GetOwner()->HasAuthority());
@@ -439,7 +439,7 @@ void UVremEquipmentComponent::SetCurrentWeapon(int32 InWeaponSlotIndex, EEquipme
 
 	OnEquipmentUpdated.Broadcast();
 
-	if (bSikipEquipMontage == false && NewEntry->EquipmentDefiniton.IsValid())
+	if (bSkipEquipMontage == false && NewEntry->EquipmentDefiniton.IsValid())
 	{
 		MulticastPlayEquipMontage(NewEntry->EquipmentDefiniton.Get());
 	}
@@ -517,13 +517,7 @@ void UVremEquipmentComponent::MulticastPlayEquipMontage_Implementation(const UVr
 		return;
 	}
 
-	const FEquipmentEntry* Entry = EquipmentList.GetEntryFromEquipmentState(EEquipmentState::OnHand);
-	if (Entry == nullptr || Entry->EquipmentDefiniton.IsValid() == false)
-	{
-		return;
-	}
-
-	UAnimMontage* EquipMontage = Entry->EquipmentDefiniton->EquipMontage;
+	UAnimMontage* EquipMontage = ItemToEquip->EquipMontage;
 	if (IsValid(EquipMontage) == false)
 	{
 		return;
