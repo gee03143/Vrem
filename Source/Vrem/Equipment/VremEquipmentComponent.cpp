@@ -517,16 +517,23 @@ void UVremEquipmentComponent::MulticastPlayEquipMontage_Implementation(const UVr
 		return;
 	}
 
+	if (IsValid(ItemToEquip) == false)
+	{
+		UE_LOG(LogVremEquipment, Warning, TEXT("MulticastPlayEquipMontage: ItemToEquip is invalid"));
+		return;
+	}
+
 	UAnimMontage* EquipMontage = ItemToEquip->EquipMontage;
 	if (IsValid(EquipMontage) == false)
 	{
+		UE_LOG(LogVremEquipment, Warning, TEXT("MulticastPlayEquipMontage: EquipMontage is invalid"));
 		return;
 	}
 
 	const ACharacter* OwnerCharacter = Cast<ACharacter>(GetOwner());
 	if (IsValid(OwnerCharacter) == false)
 	{
-		UE_LOG(LogVremEquipment, Warning, TEXT("PlayEquipMontage: Owner is not a Character"));
+		UE_LOG(LogVremEquipment, Warning, TEXT("MulticastPlayEquipMontage: Owner is not a Character"));
 		return;
 	}
 
@@ -534,7 +541,7 @@ void UVremEquipmentComponent::MulticastPlayEquipMontage_Implementation(const UVr
 	UAnimInstance* AnimInstance = IsValid(Mesh) ? Mesh->GetAnimInstance() : nullptr;
 	if (IsValid(AnimInstance) == false)
 	{
-		UE_LOG(LogVremEquipment, Warning, TEXT("PlayEquipMontage: AnimInstance is invalid"));
+		UE_LOG(LogVremEquipment, Warning, TEXT("MulticastPlayEquipMontage: AnimInstance is invalid"));
 		return;
 	}
 
