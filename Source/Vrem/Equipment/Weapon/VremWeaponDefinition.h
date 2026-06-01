@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "Engine/DataAsset.h"
+#include "GameplayTagContainer.h"
 #include "VremWeaponDefinition.generated.h"
 
 class UNiagaraSystem;
@@ -116,6 +117,15 @@ public:
 
     UPROPERTY(EditDefaultsOnly, Category = "Spread")
     FSpreadProfile SpreadProfile;
+
+    UPROPERTY(EditDefaultsOnly, Category = "Ammo")
+    FGameplayTag RequiredAmmoType;
+
+    UPROPERTY(EditDefaultsOnly, Category = "Ammo")
+    int32 MagazineSize = 0;
+
+    UPROPERTY(EditDefaultsOnly, Category = "Ammo")
+    int32 ReloadTime = 2.0f;
 
     // 발사 간격 (초) 계산
     float GetFireInterval() const { return 60.f / FireRate; }

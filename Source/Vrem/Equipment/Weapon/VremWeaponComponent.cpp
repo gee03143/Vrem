@@ -12,6 +12,7 @@
 #include "GameplayTagAssetInterface.h"
 #include "VremWeaponHandlerInterface.h"
 #include "GameFramework/Character.h"
+#include "Net/UnrealNetwork.h"
 
 static TAutoConsoleVariable<int32> CVarDebugCharacterShooting(
     TEXT("vrem.DebugCharacterShooting"),
@@ -35,6 +36,18 @@ UVremWeaponComponent::UVremWeaponComponent()
     PrimaryComponentTick.bCanEverTick = true;
 }
 
+void UVremWeaponComponent::BeginPlay()
+{
+    Super::BeginPlay();
+
+    AActor* Owner = GetOwner();
+    if (IsValid(Owner) && Owner->HasAuthority() && IsValid(WeaponDefinition))
+    {
+        CurrentMagazineAmmo = WeaponDefinition->MagazineSize;
+        OnMagazineChanged.Broadcast(CurrentMagazineAmmo, WeaponDefinition->MagazineSize);
+    }
+}
+
 void UVremWeaponComponent::TickComponent(float DeltaTime, enum ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction)
 {
     Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
@@ -50,6 +63,13 @@ void UVremWeaponComponent::TickComponent(float DeltaTime, enum ELevelTick TickTy
     }
 }
 
+void UVremWeaponComponent::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
+{
+    Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+
+    DOREPLIFETIME_CONDITION(UVremWeaponComponent, CurrentMagazineAmmo, COND_OwnerOnly);
+}
+
 void UVremWeaponComponent::RequestFire()
 {
     Fire();
@@ -58,6 +78,11 @@ void UVremWeaponComponent::RequestFire()
 void UVremWeaponComponent::RequestStopFire()
 {
     StopFire();
+}
+
+int32 UVremWeaponComponent::GetMagazineSize() const
+{
+    return IsValid(WeaponDefinition) ? WeaponDefinition->MagazineSize : 0;
 }
 
 void UVremWeaponComponent::Fire()
@@ -72,6 +97,11 @@ void UVremWeaponComponent::Fire()
     if (CanFire())
     {
         ExecuteFire();
+    }
+    else if (bCanFire && CurrentMagazineAmmo <= 0)
+    {
+        TryPlayDryFire();
+        StartFireCooldown();
     }
     return;
 }
@@ -102,11 +132,17 @@ void UVremWeaponComponent::ExecuteFire()
     );
 
     APawn* WeaponOwner = Cast<APawn>(GetWeaponOwner());
-    if (IsValid(WeaponOwner) && WeaponOwner->IsLocallyControlled())
+    if (IsValid(WeaponOwner))
     {
-        if (IsValid(WeaponDefinition))
+        if (WeaponOwner->IsLocallyControlled() && IsValid(WeaponDefinition))
         {
             PlayMontageLocally(WeaponDefinition->FireMontage);
+        }
+
+        if (WeaponOwner->GetLocalRole() == ROLE_AutonomousProxy)
+        {
+            CurrentMagazineAmmo = FMath::Max(0, CurrentMagazineAmmo - 1);
+            OnMagazineChanged.Broadcast(CurrentMagazineAmmo, GetMagazineSize());
         }
     }
 
@@ -126,6 +162,9 @@ void UVremWeaponComponent::ExecuteFire()
 
 void UVremWeaponComponent::ServerFire_Implementation(FVector ViewOrigin, FVector ViewDirection)
 {
+    CurrentMagazineAmmo = FMath::Max(0, CurrentMagazineAmmo - 1);
+    OnMagazineChanged.Broadcast(CurrentMagazineAmmo, GetMagazineSize());
+
     const FWeaponFireResult& FireResult = PerformHitScan(ViewOrigin, ViewDirection);
     MulticastOnFire(FireResult);
 }
@@ -277,7 +316,7 @@ FWeaponFireResult UVremWeaponComponent::PerformHitScan(const FVector& ViewOrigin
 
 bool UVremWeaponComponent::CanFire() const
 {
-    return bCanFire && IsValid(WeaponDefinition);
+    return bCanFire && IsValid(WeaponDefinition) && CurrentMagazineAmmo > 0;
 }
 
 void UVremWeaponComponent::StartFireCooldown()
@@ -301,7 +340,15 @@ void UVremWeaponComponent::OnFireCooldownFinished()
 
     if (bWantsToFire && WeaponDefinition->FireMode == EWeaponFireMode::FullAuto)
     {
-        ExecuteFire();
+        if (CanFire())
+        {
+            ExecuteFire();
+        }
+        else
+        {
+            TryPlayDryFire();
+            bWantsToFire = false;
+        }
     }
 }
 
@@ -368,12 +415,12 @@ FVector UVremWeaponComponent::GetMuzzleLocation() const
 {
     check(GetNetMode() != NM_DedicatedServer);
 
-	AActor* WeaponActor = GetOwner();
-	if (IsValid(WeaponActor) == false)
-	{
-		UE_LOG(LogVremWeapon, Warning, TEXT("WeaponComponent::GetMuzzleLocation WeaponActor is Invalid"));
-		return FVector::ZeroVector;
-	}
+    AActor* WeaponActor = GetOwner();
+    if (IsValid(WeaponActor) == false)
+    {
+        UE_LOG(LogVremWeapon, Warning, TEXT("WeaponComponent::GetMuzzleLocation WeaponActor is Invalid"));
+        return FVector::ZeroVector;
+    }
 
     TArray<UMeshComponent*> MeshComponents;
     WeaponActor->GetComponents<UMeshComponent>(MeshComponents);
@@ -387,7 +434,7 @@ FVector UVremWeaponComponent::GetMuzzleLocation() const
     }
 
     UE_LOG(LogVremWeapon, Warning, TEXT("WeaponComponent::GetMuzzleLocation fallback!"));
-	return GetOwner()->GetActorLocation();
+    return GetOwner()->GetActorLocation();
 }
 
 FVector UVremWeaponComponent::GetLogicalMuzzleLocation() const
@@ -434,6 +481,25 @@ void UVremWeaponComponent::CancelMontageLocally()
     }
 
     WeaponOwner->StopAnimMontage();
+}
+
+void UVremWeaponComponent::TryPlayDryFire()
+{
+    if (IsValid(WeaponDefinition) == false || IsValid(WeaponDefinition->DryFireMontage) == false)
+    {
+        return;
+    }
+
+    APawn* OwnerPawn = Cast<APawn>(GetWeaponOwner());
+    if (IsValid(OwnerPawn) && OwnerPawn->IsLocallyControlled())
+    {
+        PlayMontageLocally(WeaponDefinition->DryFireMontage);
+    }
+}
+
+void UVremWeaponComponent::OnRep_CurrentMagazineAmmo()
+{
+    OnMagazineChanged.Broadcast(CurrentMagazineAmmo, GetMagazineSize());
 }
 
 #if WITH_AUTOMATION_WORKER

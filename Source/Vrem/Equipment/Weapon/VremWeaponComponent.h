@@ -10,6 +10,8 @@
 
 class UVremWeaponDefinition;
 
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnMagazineChanged, int32, NewAmount, int32, MaxAmount);
+
 USTRUCT()
 struct FWeaponFireResult
 {
@@ -38,7 +40,9 @@ public:
 	UVremWeaponComponent();
 
 protected:
+    virtual void BeginPlay() override;
     virtual void TickComponent(float DeltaTime, enum ELevelTick TickType, FActorComponentTickFunction *ThisTickFunction) override;
+    virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 
 public:
 	// Blueprint API
@@ -47,6 +51,15 @@ public:
 
     UFUNCTION(BlueprintCallable, Category="Vrem|Weapon")
     void RequestStopFire();
+
+    UFUNCTION(BlueprintPure, Category="Vrem|Weapon")
+    int32 GetCurrentMagazineAmmo() const { return CurrentMagazineAmmo; }
+
+    UFUNCTION(BlueprintPure, Category="Vrem|Weapon")
+    int32 GetMagazineSize() const;
+
+    UPROPERTY(BlueprintAssignable, Category="Vrem|Weapon")
+    FOnMagazineChanged OnMagazineChanged;
 
     void Fire();
     void StopFire();
@@ -82,12 +95,19 @@ protected:
     void PlayMontageLocally(UAnimMontage* MontageToPlay);
     void CancelMontageLocally();
 
+    void TryPlayDryFire();
+
+    UFUNCTION()
+    void OnRep_CurrentMagazineAmmo();
 protected:
     UPROPERTY(EditDefaultsOnly)
     FName MuzzleSocketName = TEXT("Muzzle");
 
 	UPROPERTY(EditDefaultsOnly)
 	TObjectPtr<UVremWeaponDefinition> WeaponDefinition;
+
+    UPROPERTY(ReplicatedUsing = OnRep_CurrentMagazineAmmo);
+    int32 CurrentMagazineAmmo;
 private:
     FTimerHandle FireCooldownTimer;
     bool bCanFire = true;

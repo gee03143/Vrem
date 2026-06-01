@@ -22,4 +22,8 @@ namespace FVremGameplayTags
 	UE_DEFINE_GAMEPLAY_TAG_COMMENT(State_Movement_InAir, "State.Movement.InAir", "Character is in air");
 	UE_DEFINE_GAMEPLAY_TAG_COMMENT(State_Combat_MeleeAttacking, "State.Combat.MeleeAttacking", "Melee swing animation is playing");
 	UE_DEFINE_GAMEPLAY_TAG_COMMENT(State_Combat_MeleeMode, "State.Combat.MeleeMode", "Melee weapon is currently held in hand");
+
+	//items
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Item_Ammo_Heavy, "Item.Ammo.Heavy", "Heavy Ammo");
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Item_Ammo_Light, "Item.Ammo.Light", "Light Ammo");
 }
