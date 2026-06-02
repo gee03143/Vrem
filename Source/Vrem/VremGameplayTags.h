@@ -17,6 +17,7 @@ namespace FVremGameplayTags
 	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Input_Skill_1);
 	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Input_Skill_2);
 	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Input_Weapon_Swap);
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Input_Weapon_Reload);
 
 	// states
 	UE_DECLARE_GAMEPLAY_TAG_EXTERN(State_Aiming_ADS);

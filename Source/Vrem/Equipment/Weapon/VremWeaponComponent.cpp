@@ -13,6 +13,7 @@
 #include "VremWeaponHandlerInterface.h"
 #include "GameFramework/Character.h"
 #include "Net/UnrealNetwork.h"
+#include "Vrem/Inventory/VremInventoryComponent.h"
 
 static TAutoConsoleVariable<int32> CVarDebugCharacterShooting(
     TEXT("vrem.DebugCharacterShooting"),
@@ -68,6 +69,7 @@ void UVremWeaponComponent::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>&
     Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 
     DOREPLIFETIME_CONDITION(UVremWeaponComponent, CurrentMagazineAmmo, COND_OwnerOnly);
+    DOREPLIFETIME_CONDITION(UVremWeaponComponent, bIsReloading, COND_OwnerOnly);
 }
 
 void UVremWeaponComponent::RequestFire()
@@ -80,9 +82,85 @@ void UVremWeaponComponent::RequestStopFire()
     StopFire();
 }
 
+void UVremWeaponComponent::RequestReload()
+{
+    if (CanReload() == false)
+    {
+        return;
+    }
+
+    APawn* Pawn = Cast<APawn>(GetWeaponOwner());
+    if (IsValid(Pawn) && Pawn->IsLocallyControlled() && IsValid(WeaponDefinition->ReloadMontage))
+    {
+        PlayMontageLocally(WeaponDefinition->ReloadMontage);
+    }
+
+    AActor* Owner = GetWeaponOwner();
+    if (IsValid(Owner) && Owner->HasAuthority())
+    {
+        ExecuteReload();
+    }
+    else
+    {
+        ServerStartReload();
+    }
+}
+
+void UVremWeaponComponent::RequestCancelReload()
+{
+    if (bIsReloading == false)
+    {
+        return;
+    }
+
+    // 자기 클라 즉시 몽타주 중단
+    APawn* Pawn = Cast<APawn>(GetWeaponOwner());
+    if (IsValid(Pawn) && Pawn->IsLocallyControlled())
+    {
+        CancelMontageLocally();
+    }
+
+    AActor* Owner = GetWeaponOwner();
+    if (IsValid(Owner) && Owner->HasAuthority())
+    {
+        CancelReloadLocal();
+    }
+    else
+    {
+        ServerCancelReload();
+    }
+}
+
 int32 UVremWeaponComponent::GetMagazineSize() const
 {
     return IsValid(WeaponDefinition) ? WeaponDefinition->MagazineSize : 0;
+}
+
+bool UVremWeaponComponent::CanReload() const
+{
+    if (bIsReloading)
+    {
+        return false;
+    }
+    if (IsValid(WeaponDefinition) == false)
+    {
+        return false;
+    }
+    if (CurrentMagazineAmmo >= WeaponDefinition->MagazineSize)
+    {
+        return false;   // 가득
+    }
+
+    UVremInventoryComponent* Inv = GetCharacterInventory();
+    if (IsValid(Inv) == false)
+    {
+        return false;
+    }
+    if (Inv->GetAmmoCount(WeaponDefinition->RequiredAmmoType) <= 0)
+    {
+        return false;   // 예비탄 0
+    }
+    return true;
 }
 
 void UVremWeaponComponent::Fire()
@@ -93,6 +171,11 @@ void UVremWeaponComponent::Fire()
     }
 
     bWantsToFire = true;
+
+    if (bIsReloading && CurrentMagazineAmmo > 0)
+    {
+        RequestCancelReload();
+    }
 
     if (CanFire())
     {
@@ -316,7 +399,7 @@ FWeaponFireResult UVremWeaponComponent::PerformHitScan(const FVector& ViewOrigin
 
 bool UVremWeaponComponent::CanFire() const
 {
-    return bCanFire && IsValid(WeaponDefinition) && CurrentMagazineAmmo > 0;
+    return bIsReloading == false && bCanFire && IsValid(WeaponDefinition) && CurrentMagazineAmmo > 0;
 }
 
 void UVremWeaponComponent::StartFireCooldown()
@@ -409,6 +492,87 @@ void UVremWeaponComponent::AccumulateBloom()
 
     const FSpreadProfile& Profile = WeaponDefinition->SpreadProfile;
     CurrentBloom = FMath::Min(Profile.MaxBloom, CurrentBloom + Profile.BloomPerShot);
+}
+
+void UVremWeaponComponent::ExecuteReload()
+{
+    check(IsValid(GetOwner()));
+    check(GetOwner()->HasAuthority());
+
+    if (CanReload() == false)
+    {
+        return;
+    }
+
+    bIsReloading = true;
+
+    GetWorld()->GetTimerManager().SetTimer(
+        ReloadTimer, this, &UVremWeaponComponent::OnReloadTimerFinished,
+        WeaponDefinition->ReloadTime, false);
+}
+
+void UVremWeaponComponent::OnReloadTimerFinished()
+{
+    check(IsValid(GetOwner()));
+    check(GetOwner()->HasAuthority());
+
+    if (bIsReloading == false)
+    {
+        return;
+    }
+
+    UVremInventoryComponent* Inv = GetCharacterInventory();
+    if (IsValid(Inv) && IsValid(WeaponDefinition))
+    {
+        const int32 AmountNeeded = WeaponDefinition->MagazineSize - CurrentMagazineAmmo;
+        const int32 Consumed = Inv->RemoveAmmo(WeaponDefinition->RequiredAmmoType, AmountNeeded);
+        CurrentMagazineAmmo += Consumed;
+        OnMagazineChanged.Broadcast(CurrentMagazineAmmo, GetMagazineSize());
+    }
+
+    bIsReloading = false;
+}
+
+void UVremWeaponComponent::CancelReloadLocal()
+{
+    check(IsValid(GetOwner()));
+    check(GetOwner()->HasAuthority());
+
+    if (bIsReloading == false)
+    {
+        return;
+    }
+
+    GetWorld()->GetTimerManager().ClearTimer(ReloadTimer);
+    bIsReloading = false;
+}
+
+void UVremWeaponComponent::ServerStartReload_Implementation()
+{
+    ExecuteReload();
+}
+
+void UVremWeaponComponent::ServerCancelReload_Implementation()
+{
+    CancelReloadLocal();
+}
+
+void UVremWeaponComponent::OnRep_IsReloading()
+{
+    if (bIsReloading)
+    {
+        OnReloadStarted.Broadcast();
+    }
+    else
+    {
+        OnReloadFinished.Broadcast();
+    }
+}
+
+UVremInventoryComponent* UVremWeaponComponent::GetCharacterInventory() const
+{
+    ACharacter* Character = Cast<ACharacter>(GetWeaponOwner());
+    return IsValid(Character) ? Character->FindComponentByClass<UVremInventoryComponent>() : nullptr;
 }
 
 FVector UVremWeaponComponent::GetMuzzleLocation() const

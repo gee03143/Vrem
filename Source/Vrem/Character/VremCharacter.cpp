@@ -260,6 +260,11 @@ void AVremCharacter::WeaponSwap(const FInputActionValue& Value)
 	OnWeaponSwapPressed();
 }
 
+void AVremCharacter::Reload(const FInputActionValue& Value)
+{
+	OnReloadPressed();
+}
+
 void AVremCharacter::TryBindInputByInputConfig()
 {
 	// TODO : InputManager로 GameplayTag - BP Event 매핑 관리
@@ -333,6 +338,12 @@ void AVremCharacter::TryBindInputByInputConfig()
 		if (WeaponSwapAction != nullptr)
 		{
 			EIC->BindAction(WeaponSwapAction, ETriggerEvent::Started, this, &AVremCharacter::WeaponSwap);
+		}
+
+		const UInputAction* ReloadAction = CurrentInputConfig->FindInputActionByTag(FVremGameplayTags::Input_Weapon_Reload);
+		if (ReloadAction != nullptr)
+		{
+			EIC->BindAction(ReloadAction, ETriggerEvent::Started, this, &AVremCharacter::Reload);
 		}
 	}
 	else

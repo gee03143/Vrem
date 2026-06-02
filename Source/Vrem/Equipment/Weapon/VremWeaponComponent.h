@@ -9,8 +9,11 @@
 #include "VremWeaponComponent.generated.h"
 
 class UVremWeaponDefinition;
+class UVremInventoryComponent;
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnMagazineChanged, int32, NewAmount, int32, MaxAmount);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnReloadStarted);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnReloadFinished);
 
 USTRUCT()
 struct FWeaponFireResult
@@ -52,19 +55,39 @@ public:
     UFUNCTION(BlueprintCallable, Category="Vrem|Weapon")
     void RequestStopFire();
 
+    UFUNCTION(BlueprintCallable, Category = "Vrem|Weapon")
+    void RequestReload();
+
+    UFUNCTION(BlueprintCallable, Category = "Vrem|Weapon")
+    void RequestCancelReload();
+
     UFUNCTION(BlueprintPure, Category="Vrem|Weapon")
     int32 GetCurrentMagazineAmmo() const { return CurrentMagazineAmmo; }
 
     UFUNCTION(BlueprintPure, Category="Vrem|Weapon")
     int32 GetMagazineSize() const;
 
+    UFUNCTION(BlueprintPure, Category = "Vrem|Weapon")
+    bool CanReload() const;
+
+    UFUNCTION(BlueprintPure, Category = "Vrem|Weapon")
+    bool IsReloading() const { return bIsReloading; }
+
     UPROPERTY(BlueprintAssignable, Category="Vrem|Weapon")
     FOnMagazineChanged OnMagazineChanged;
+
+    UPROPERTY(BlueprintAssignable, Category = "Vrem|Weapon")
+    FOnReloadStarted OnReloadStarted;
+
+    UPROPERTY(BlueprintAssignable, Category = "Vrem|Weapon")
+    FOnReloadFinished OnReloadFinished;
 
     void Fire();
     void StopFire();
 
     float GetCurrentSpread() const;
+
+    // Fire
 protected:
     void ExecuteFire();
 
@@ -84,6 +107,36 @@ protected:
     AActor* GetWeaponOwner() const;
 
     void AccumulateBloom();
+
+private:
+    FTimerHandle FireCooldownTimer;
+    bool bCanFire = true;
+    bool bWantsToFire = false;
+
+    float CurrentBloom = 0.f;
+
+    // Reload
+protected:
+    void ExecuteReload();          // 권위 측 본문
+    void OnReloadTimerFinished();  // 완료 콜백
+    void CancelReloadLocal();      // 권위 측 캔슬 본문
+
+    UFUNCTION(Server, Reliable)
+    void ServerStartReload();
+
+    UFUNCTION(Server, Reliable)
+    void ServerCancelReload();
+
+    UFUNCTION()
+    void OnRep_IsReloading();
+
+    UVremInventoryComponent* GetCharacterInventory() const;
+
+private:
+    UPROPERTY(ReplicatedUsing = OnRep_IsReloading)
+    bool bIsReloading = false;
+
+    FTimerHandle ReloadTimer;
 
 protected:
     // client only, 애니메이션이 반영된 총기 머즐 소켓 위치
@@ -108,12 +161,6 @@ protected:
 
     UPROPERTY(ReplicatedUsing = OnRep_CurrentMagazineAmmo);
     int32 CurrentMagazineAmmo;
-private:
-    FTimerHandle FireCooldownTimer;
-    bool bCanFire = true;
-    bool bWantsToFire = false;
-
-    float CurrentBloom = 0.f;
 
 #if WITH_AUTOMATION_WORKER
 public:

@@ -75,6 +75,9 @@ struct FInventoryList : public FFastArraySerializer
 
 	TArray<FVremInventoryEntryView> CollectEntryViews() const;
 
+	int32 GetCountByFragmentMatch(const UItemFragment* MatchFragment) const;
+	int32 RemoveByFragmentMatch(const UItemFragment* MatchFragment, int32 Amount);
+
 	void AddEntry(const FPrimaryAssetId& ItemToAdd);
 	void RemoveEntry(const FPrimaryAssetId& ItemToRemove);
 	int32 GetNumEntries() const { return Entries.Num(); }
@@ -145,6 +148,17 @@ public:
 	FString GetInventoryItemsString() const { return InventoryItems.ToString(); }
 	int32 GetInventoryItemNum() const { return InventoryItems.GetNumEntries(); }
 	TArray<FVremInventoryEntryView> GetInventoryEntries() const;
+
+	UFUNCTION(BlueprintPure, Category = "Vrem|Inventory")
+	int32 GetItemCountByFragmentMatch(const UItemFragment* MatchFragment) const;
+
+	int32 RemoveItemsByFragmentMatch(const UItemFragment* MatchFragment, int32 Amount);
+
+	UFUNCTION(BlueprintCallable, Category = "Vrem|Inventory|Ammo")
+    int32 GetAmmoCount(FGameplayTag AmmoType) const;
+
+    int32 RemoveAmmo(FGameplayTag AmmoType, int32 Amount);
+
 
 	UFUNCTION(Server, Reliable)
 	void ServerAddItemToInventory(const UVremItemDefinition* ItemToAdd);

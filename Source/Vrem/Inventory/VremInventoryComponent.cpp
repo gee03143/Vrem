@@ -6,6 +6,7 @@
 #include "Vrem/VremLogChannels.h"
 #include "Vrem/VremAssetManager.h"
 #include "Vrem/Equipment/ItemFragment_Equipment.h"
+#include "Vrem/Equipment/Weapon/ItemFragment_Ammo.h"
 
 
 // =======================================
@@ -45,6 +46,81 @@ TArray<FVremInventoryEntryView> FInventoryList::CollectEntryViews() const
 		View.Instance = Entry.ItemInstance;
 	}
 	return Result;
+}
+
+int32 FInventoryList::GetCountByFragmentMatch(const UItemFragment* MatchFragment) const
+{
+	if (IsValid(MatchFragment) == false)
+	{
+		return 0;
+	}
+
+	int32 ReturnValue = 0;
+	for (const FInventoryEntry& Entry : Entries)
+	{
+		if (IsValid(Entry.ItemInstance) == false)
+		{
+			continue;
+		}
+
+		UItemFragment* EntryFragment = Entry.ItemInstance->FindFragmentByClass(MatchFragment->GetClass());
+		if (EntryFragment && EntryFragment->Matches(MatchFragment))
+		{
+			ReturnValue += Entry.Count;
+		}
+	}
+
+	return ReturnValue;
+}
+
+int32 FInventoryList::RemoveByFragmentMatch(const UItemFragment* MatchFragment, int32 Amount)
+{
+	if (IsValid(MatchFragment) == false || Amount <= 0)
+	{
+		return 0;
+	}
+
+	int32 Remaining = Amount;
+	int32 TotalConsumed = 0;
+
+	for (int32 i = Entries.Num() - 1; i >= 0 && Remaining > 0; --i)
+	{
+		FInventoryEntry& Entry = Entries[i];
+		if (IsValid(Entry.ItemInstance) == false)
+		{
+			continue;
+		}
+
+		UItemFragment* EntryFragment = Entry.ItemInstance->FindFragmentByClass(MatchFragment->GetClass());
+		if (EntryFragment == nullptr || EntryFragment->Matches(MatchFragment) == false)
+		{
+			continue;
+		}
+
+		const int32 ConsumeFromThis = FMath::Min(Remaining, Entry.Count);
+		Entry.Count -= ConsumeFromThis;
+		Remaining -= ConsumeFromThis;
+		TotalConsumed += ConsumeFromThis;
+
+		if (Entry.Count <= 0)
+		{
+			const UVremItemDefinition* ItemDef = Entries[i].ItemInstance->GetItemDefinition();
+			Entries[i].ItemInstance->OnItemRemoved();
+			Entries.RemoveAt(i);
+			MarkArrayDirty();
+
+			if (OwnerComponent)
+			{
+				OwnerComponent->OnItemInstanceRemoved.Broadcast(ItemDef);
+			}
+		}
+		else
+		{
+			MarkItemDirty(Entry);
+		}
+	}
+
+	return TotalConsumed;
 }
 
 void FInventoryList::AddEntry(const FPrimaryAssetId& ItemToAdd)
@@ -236,6 +312,36 @@ void UVremInventoryComponent::RemoveItemFromInventory(const UVremItemDefinition*
 TArray<FVremInventoryEntryView> UVremInventoryComponent::GetInventoryEntries() const
 {
 	return InventoryItems.CollectEntryViews();
+}
+
+int32 UVremInventoryComponent::GetItemCountByFragmentMatch(const UItemFragment* MatchFragment) const
+{
+	return InventoryItems.GetCountByFragmentMatch(MatchFragment);
+}
+
+int32 UVremInventoryComponent::RemoveItemsByFragmentMatch(const UItemFragment* MatchFragment, int32 Amount) 
+{
+	check(IsValid(GetOwner()));
+	check(GetOwner()->HasAuthority());
+
+	return InventoryItems.RemoveByFragmentMatch(MatchFragment, Amount);
+}
+
+int32 UVremInventoryComponent::GetAmmoCount(FGameplayTag AmmoType) const
+{
+	UItemFragment_Ammo* Probe = NewObject<UItemFragment_Ammo>(GetTransientPackage());
+	Probe->SetAmmoType(AmmoType);
+
+	return GetItemCountByFragmentMatch(Probe);
+}
+
+int32 UVremInventoryComponent::RemoveAmmo(FGameplayTag AmmoType, int32 Amount)
+{
+	UItemFragment_Ammo* Probe = NewObject<UItemFragment_Ammo>(GetTransientPackage());
+	Probe->SetAmmoType(AmmoType);
+
+	// RemoveItemsByFragmentMatch 안에서 HasAuthority 체크함
+	return RemoveItemsByFragmentMatch(Probe, Amount);
 }
 
 void UVremInventoryComponent::ServerAddItemToInventory_Implementation(const UVremItemDefinition* ItemToAdd)

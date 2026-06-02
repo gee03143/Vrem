@@ -59,6 +59,9 @@ public:
 	UFUNCTION(BlueprintImplementableEvent, Category="Vrem|Input")
 	void OnWeaponSwapPressed();
 
+	UFUNCTION(BlueprintImplementableEvent, Category="Vrem|Input")
+    void OnReloadPressed();
+
 	UFUNCTION(BlueprintNativeEvent, BlueprintPure, Category="Vrem|Movement")
     bool CanMove() const;
 protected:
@@ -76,6 +79,7 @@ protected:
 	void Skill1(const FInputActionValue& Value);
 	void Skill2(const FInputActionValue& Value);
 	void WeaponSwap(const FInputActionValue& Value);
+	void Reload(const FInputActionValue& Value);
 
 	void TryBindInputByInputConfig();
 protected:

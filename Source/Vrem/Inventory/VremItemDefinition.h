@@ -16,6 +16,11 @@ class UItemFragment : public UObject
 public:
     virtual void OnItemCreated(UVremItemInstance* Instance) {}
     virtual void OnItemRemoved(UVremItemInstance* Instance) {}
+
+	virtual bool Matches(const UItemFragment* Other) const
+	{
+		return Other != nullptr && GetClass() == Other->GetClass();
+	}
 };
 
 UCLASS()

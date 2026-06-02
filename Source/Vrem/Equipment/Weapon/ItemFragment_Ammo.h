@@ -20,6 +20,9 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Vrem|Ammo")
 	FGameplayTag GetAmmoType() const { return AmmoType; }
 
+	void SetAmmoType(FGameplayTag InType) { AmmoType = InType; }
+
+	virtual bool Matches(const UItemFragment* Other) const override;
 protected:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Ammo")
 	FGameplayTag AmmoType;
