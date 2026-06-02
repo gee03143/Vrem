@@ -8,6 +8,7 @@
 #include "VremWeaponDefinition.generated.h"
 
 class UNiagaraSystem;
+class UVremItemDefinition;
 
 UENUM()
 enum class EWeaponFireMode : uint8
@@ -121,11 +122,17 @@ public:
     UPROPERTY(EditDefaultsOnly, Category = "Ammo")
     FGameplayTag RequiredAmmoType;
 
+    // TODO: GameplayTag(RequiredAmmoType) -> AmmoItemDefinition Mapping DataTable will be implemented.
+    //       until then connect itemdefinition manually.
+    //       after implementation, remove this field and replace with runtime DataTable lookup.
+    UPROPERTY(EditDefaultsOnly, Category = "Ammo")
+    TObjectPtr<UVremItemDefinition> AmmoItemDefinition;
+
     UPROPERTY(EditDefaultsOnly, Category = "Ammo")
     int32 MagazineSize = 0;
 
     UPROPERTY(EditDefaultsOnly, Category = "Ammo")
-    int32 ReloadTime = 2.0f;
+    float ReloadTime = 2.0f;
 
     // 발사 간격 (초) 계산
     float GetFireInterval() const { return 60.f / FireRate; }

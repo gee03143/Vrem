@@ -42,11 +42,42 @@ void UVremWeaponComponent::BeginPlay()
     Super::BeginPlay();
 
     AActor* Owner = GetOwner();
-    if (IsValid(Owner) && Owner->HasAuthority() && IsValid(WeaponDefinition))
+    if (IsValid(Owner) == false || Owner->HasAuthority() == false || IsValid(WeaponDefinition) == false)
     {
-        CurrentMagazineAmmo = WeaponDefinition->MagazineSize;
-        OnMagazineChanged.Broadcast(CurrentMagazineAmmo, WeaponDefinition->MagazineSize);
+        return;
     }
+
+    int32 LoadedAmount = 0;
+    UVremInventoryComponent* Inventory = GetCharacterInventory();
+    if (IsValid(Inventory))
+    {
+        LoadedAmount = Inventory->RemoveAmmo(WeaponDefinition->RequiredAmmoType, WeaponDefinition->MagazineSize);
+    }
+
+    CurrentMagazineAmmo = LoadedAmount;
+    OnMagazineChanged.Broadcast(CurrentMagazineAmmo, WeaponDefinition->MagazineSize);
+}
+
+void UVremWeaponComponent::EndPlay(const EEndPlayReason::Type EndPlayReason)
+{
+    if (EndPlayReason == EEndPlayReason::Destroyed)
+    {
+        AActor* Owner = GetOwner();
+        if (IsValid(Owner) && Owner->HasAuthority() && IsValid(WeaponDefinition) && CurrentMagazineAmmo > 0)
+        {
+            // TODO: GameplayTag(RequiredAmmoType) -> AmmoItemDefinition Mapping DataTable will be implemented.
+            //       until then we connect itemdefinition manually.
+            //       after implementation, remove this field and replace with runtime DataTable lookup.
+            UVremInventoryComponent* Inventory = GetCharacterInventory();
+            if (IsValid(Inventory) && IsValid(WeaponDefinition->AmmoItemDefinition))
+            {
+                Inventory->AddItemToInventory(WeaponDefinition->AmmoItemDefinition, CurrentMagazineAmmo);
+                CurrentMagazineAmmo = 0;
+            }
+        }
+    }
+
+    Super::EndPlay(EndPlayReason);
 }
 
 void UVremWeaponComponent::TickComponent(float DeltaTime, enum ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction)
