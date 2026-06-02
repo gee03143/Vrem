@@ -123,12 +123,12 @@ int32 FInventoryList::RemoveByFragmentMatch(const UItemFragment* MatchFragment, 
 	return TotalConsumed;
 }
 
-void FInventoryList::AddEntry(const FPrimaryAssetId& ItemToAdd)
+void FInventoryList::AddEntry(const FPrimaryAssetId& ItemToAdd, int32 Amount)
 {
 	FInventoryEntry* FoundEntry = GetEntryFromId(ItemToAdd);
 	if (FoundEntry)
 	{
-		FoundEntry->Count++;
+		FoundEntry->Count += Amount;
 		MarkItemDirty(*FoundEntry);
 	}
 	else
@@ -140,20 +140,20 @@ void FInventoryList::AddEntry(const FPrimaryAssetId& ItemToAdd)
 		{
 			FInventoryEntry& NewEntry = Entries.Emplace_GetRef();
 			NewEntry.ItemId = ItemToAdd;
-			NewEntry.Count = 1;
+			NewEntry.Count = Amount;
 
 			CreateInstanceForEntry(NewEntry);
 		}
 	}
 }
 
-void FInventoryList::RemoveEntry(const FPrimaryAssetId& ItemToRemove)
+void FInventoryList::RemoveEntry(const FPrimaryAssetId& ItemToRemove, int32 Amount)
 {
 	for (int32 i = 0; i < Entries.Num(); ++i)
 	{
 		if (Entries[i].ItemId == ItemToRemove)
 		{
-			Entries[i].Count--;
+			Entries[i].Count -= Amount;
 			if (Entries[i].Count <= 0)
 			{
 				const UVremItemDefinition* ItemDef = Entries[i].ItemInstance->GetItemDefinition();
@@ -291,21 +291,31 @@ void UVremInventoryComponent::GetLifetimeReplicatedProps(TArray<FLifetimePropert
 	DOREPLIFETIME_CONDITION(UVremInventoryComponent, InventoryItems, COND_OwnerOnly);
 }
 
-void UVremInventoryComponent::AddItemToInventory(const UVremItemDefinition* ItemToAdd)
+void UVremInventoryComponent::AddItemToInventory(const UVremItemDefinition* ItemToAdd, int32 Amount)
 {
     check(IsValid(GetOwner()));
     check(GetOwner()->HasAuthority());
 
-	InventoryItems.AddEntry(ItemToAdd->GetPrimaryAssetId());
+	if (IsValid(ItemToAdd) == false || Amount <= 0)
+	{
+		return;
+	}
+
+	InventoryItems.AddEntry(ItemToAdd->GetPrimaryAssetId(), Amount);
     OnInventoryChanged.Broadcast();
 }
 
-void UVremInventoryComponent::RemoveItemFromInventory(const UVremItemDefinition* ItemToRemove)
+void UVremInventoryComponent::RemoveItemFromInventory(const UVremItemDefinition* ItemToRemove, int32 Amount)
 {
 	check(IsValid(GetOwner()));
 	check(GetOwner()->HasAuthority());
 
-	InventoryItems.RemoveEntry(ItemToRemove->GetPrimaryAssetId());
+	if (IsValid(ItemToRemove) == false || Amount <= 0)
+	{
+		return;
+	}
+
+	InventoryItems.RemoveEntry(ItemToRemove->GetPrimaryAssetId(), Amount);
 	OnInventoryChanged.Broadcast();
 }
 
@@ -344,14 +354,14 @@ int32 UVremInventoryComponent::RemoveAmmo(FGameplayTag AmmoType, int32 Amount)
 	return RemoveItemsByFragmentMatch(Probe, Amount);
 }
 
-void UVremInventoryComponent::ServerAddItemToInventory_Implementation(const UVremItemDefinition* ItemToAdd)
+void UVremInventoryComponent::ServerAddItemToInventory_Implementation(const UVremItemDefinition* ItemToAdd, int32 Amount)
 {
-	AddItemToInventory(ItemToAdd);
+	AddItemToInventory(ItemToAdd, Amount);
 }
 
-void UVremInventoryComponent::ServerRemoveItemFromInventory_Implementation(const UVremItemDefinition* ItemToRemove)
+void UVremInventoryComponent::ServerRemoveItemFromInventory_Implementation(const UVremItemDefinition* ItemToRemove, int32 Amount)
 {
-	RemoveItemFromInventory(ItemToRemove);
+	RemoveItemFromInventory(ItemToRemove, Amount);
 }
 
 void UVremInventoryComponent::InitializeDefaultItems()
@@ -359,10 +369,12 @@ void UVremInventoryComponent::InitializeDefaultItems()
 	check(IsValid(GetOwner()));
 	check(GetOwner()->HasAuthority());
 
-	for (const UVremItemDefinition* Def : DefaultItemDefinitions)
+	for (const FDefaultInventoryItem& DefaultItem : DefaultItems)
 	{
-
-		AddItemToInventory(Def);
+		if (IsValid(DefaultItem.ItemDefinition) && DefaultItem.Count > 0)
+		{
+			AddItemToInventory(DefaultItem.ItemDefinition, DefaultItem.Count);
+		}
 	}
 }
 

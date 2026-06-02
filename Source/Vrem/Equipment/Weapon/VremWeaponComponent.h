@@ -127,6 +127,12 @@ protected:
     UFUNCTION(Server, Reliable)
     void ServerCancelReload();
 
+    UFUNCTION(NetMulticast, Unreliable)
+    void MulticastPlayReloadMontage();
+
+    UFUNCTION(NetMulticast, Unreliable)
+    void MulticastCancelReloadMontage();
+
     UFUNCTION()
     void OnRep_IsReloading();
 

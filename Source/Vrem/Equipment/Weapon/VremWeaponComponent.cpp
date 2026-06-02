@@ -102,6 +102,7 @@ void UVremWeaponComponent::RequestReload()
     }
     else
     {
+        bIsReloading = true; // client prediction (will be corrected when OnRep)
         ServerStartReload();
     }
 }
@@ -127,6 +128,7 @@ void UVremWeaponComponent::RequestCancelReload()
     }
     else
     {
+        bIsReloading = false; // client prediction (will be corrected when OnRep)
         ServerCancelReload();
     }
 }
@@ -509,6 +511,8 @@ void UVremWeaponComponent::ExecuteReload()
     GetWorld()->GetTimerManager().SetTimer(
         ReloadTimer, this, &UVremWeaponComponent::OnReloadTimerFinished,
         WeaponDefinition->ReloadTime, false);
+
+    MulticastPlayReloadMontage();
 }
 
 void UVremWeaponComponent::OnReloadTimerFinished()
@@ -545,6 +549,8 @@ void UVremWeaponComponent::CancelReloadLocal()
 
     GetWorld()->GetTimerManager().ClearTimer(ReloadTimer);
     bIsReloading = false;
+
+    MulticastCancelReloadMontage();
 }
 
 void UVremWeaponComponent::ServerStartReload_Implementation()
@@ -555,6 +561,42 @@ void UVremWeaponComponent::ServerStartReload_Implementation()
 void UVremWeaponComponent::ServerCancelReload_Implementation()
 {
     CancelReloadLocal();
+}
+
+void UVremWeaponComponent::MulticastPlayReloadMontage_Implementation()
+{
+    if (GetNetMode() == NM_DedicatedServer)
+    {
+        return;
+    }
+    if (IsValid(WeaponDefinition) == false || IsValid(WeaponDefinition->ReloadMontage) == false)
+    {
+        return;
+    }
+
+    APawn* OwnerPawn = Cast<APawn>(GetWeaponOwner());
+    if (IsValid(OwnerPawn) && OwnerPawn->IsLocallyControlled())
+    {
+        return;   // 자기 클라는 RequestReload 에서 이미 재생
+    }
+
+    PlayMontageLocally(WeaponDefinition->ReloadMontage);
+}
+
+void UVremWeaponComponent::MulticastCancelReloadMontage_Implementation()
+{
+    if (GetNetMode() == NM_DedicatedServer)
+    {
+        return;
+    }
+
+    APawn* OwnerPawn = Cast<APawn>(GetWeaponOwner());
+    if (IsValid(OwnerPawn) && OwnerPawn->IsLocallyControlled())
+    {
+        return;   // 자기 클라는 RequestCancelReload 에서 이미 중단
+    }
+
+    CancelMontageLocally();
 }
 
 void UVremWeaponComponent::OnRep_IsReloading()
