@@ -339,20 +339,6 @@ void UVremEquipmentComponent::RequestSetCurrentWeapon(int32 InSlotIndex, EEquipm
 	}
 }
 
-void UVremEquipmentComponent::RequestEquipItemByInstance(const UVremItemInstance* ItemToEquip, int32 InSlotIndex)
-{
-	if (IsValid(ItemToEquip) == false)
-	{
-		return;
-	}
-
-	UItemFragment_Equipment* EquipmentFragment = ItemToEquip->FindFragment<UItemFragment_Equipment>();
-	if (EquipmentFragment)
-	{
-		RequestEquipItemByDefinition(EquipmentFragment->GetEquipmentDefinition(), InSlotIndex);
-	}
-}
-
 void UVremEquipmentComponent::RequestEquipItemByDefinition(const UVremEquipmentDefinition* ItemToEquip, int32 InSlotIndex)
 {
 	if (IsValid(ItemToEquip) == false)

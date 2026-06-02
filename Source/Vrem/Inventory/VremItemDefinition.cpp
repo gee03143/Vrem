@@ -73,3 +73,24 @@ UItemFragment* UVremItemInstance::FindFragmentByClass(TSubclassOf<UItemFragment>
 {
 	return IsValid(ItemDef) ? ItemDef->FindFragmentByClass(FragmentClass) : nullptr;
 }
+
+int32 UVremItemInstance::GetStateInt(FGameplayTag Key, int32 Default) const
+{
+	const int32* Found = IntStats.Find(Key);
+	return Found ? *Found : Default;
+}
+
+void UVremItemInstance::SetStateInt(FGameplayTag Key, int32 Value)
+{
+	IntStats.FindOrAdd(Key) = Value;
+}
+
+bool UVremItemInstance::HasStateInt(FGameplayTag Key) const
+{
+	return IntStats.Contains(Key);
+}
+
+void UVremItemInstance::RemoveStateInt(FGameplayTag Key)
+{
+	IntStats.Remove(Key);
+}

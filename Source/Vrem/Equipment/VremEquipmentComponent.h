@@ -38,7 +38,7 @@ struct FEquipmentEntry : public FFastArraySerializerItem
 	UPROPERTY()
 	EEquipmentState EquipmentState = EEquipmentState::Stowed;
 
-	UPROPERTY()  // ���� �߰� - ������
+	UPROPERTY()
 	TWeakObjectPtr<AVremEquipmentActor> EquipmentActor;
 
 	UPROPERTY(NotReplicated, Transient)
@@ -179,9 +179,6 @@ public:
     UFUNCTION(BlueprintCallable, Category="Vrem|Equipment")
     void RequestSetCurrentWeapon(int32 InSlotIndex, EEquipmentState PrevOnHandDest = EEquipmentState::Stowed, bool bSkipEquipMontage = false);
 
-	UFUNCTION(BlueprintCallable, Category="Vrem|Equipment")
-    void RequestEquipItemByInstance(const UVremItemInstance* ItemToEquip, int32 InSlotIndex);
-
     UFUNCTION(BlueprintCallable, Category="Vrem|Equipment")
     void RequestEquipItemByDefinition(const UVremEquipmentDefinition* ItemToEquip, int32 InSlotIndex);
 
@@ -250,7 +247,6 @@ private:
 
 #if WITH_AUTOMATION_WORKER
 public:
-	// �׽�Ʈ���� ������ �ùķ��̼��ϱ� ���� ����
 	void SimulateReplicateFrom(const UVremEquipmentComponent* Source);
 	EEquipmentState GetEquipmentStateAtSlot(int32 InSlotIndex) const;
 #endif

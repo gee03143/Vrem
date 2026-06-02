@@ -30,4 +30,7 @@ namespace FVremGameplayTags
 	//items
 	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Item_Ammo_Heavy);
 	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Item_Ammo_Light);
+
+	//item states
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Item_State_MagazineAmmo);
 }

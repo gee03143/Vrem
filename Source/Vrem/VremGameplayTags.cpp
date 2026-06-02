@@ -27,4 +27,7 @@ namespace FVremGameplayTags
 	//items
 	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Item_Ammo_Heavy, "Item.Ammo.Heavy", "Heavy Ammo");
 	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Item_Ammo_Light, "Item.Ammo.Light", "Light Ammo");
+
+	//item states
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Item_State_MagazineAmmo, "Item.State.MagazineAmmo", "Magazine ammo count saved in weapon item");
 }

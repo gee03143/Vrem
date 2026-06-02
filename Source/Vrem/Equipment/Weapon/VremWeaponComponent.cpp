@@ -525,11 +525,11 @@ void UVremWeaponComponent::OnReloadTimerFinished()
         return;
     }
 
-    UVremInventoryComponent* Inv = GetCharacterInventory();
-    if (IsValid(Inv) && IsValid(WeaponDefinition))
+    UVremInventoryComponent* InventoryComponent = GetCharacterInventory();
+    if (IsValid(InventoryComponent) && IsValid(WeaponDefinition))
     {
         const int32 AmountNeeded = WeaponDefinition->MagazineSize - CurrentMagazineAmmo;
-        const int32 Consumed = Inv->RemoveAmmo(WeaponDefinition->RequiredAmmoType, AmountNeeded);
+        const int32 Consumed = InventoryComponent->RemoveAmmo(WeaponDefinition->RequiredAmmoType, AmountNeeded);
         CurrentMagazineAmmo += Consumed;
         OnMagazineChanged.Broadcast(CurrentMagazineAmmo, GetMagazineSize());
     }
