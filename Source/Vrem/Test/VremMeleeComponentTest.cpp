@@ -119,11 +119,9 @@ bool FMeleeComboProgressionTest::RunTest(const FString& Parameters)
 
     Context.MeleeComp->SimulateAttackStart_ForTest();
     TestEqual(TEXT("After 1st attack, combo index advances to 1"), Context.MeleeComp->GetCurrentComboIndex_ForTest(), 1);
-    Context.MeleeComp->TriggerAttackDurationFinished_ForTest();
 
     Context.MeleeComp->SimulateAttackStart_ForTest();
     TestEqual(TEXT("After 2nd attack, combo index advances to 2"), Context.MeleeComp->GetCurrentComboIndex_ForTest(), 2);
-    Context.MeleeComp->TriggerAttackDurationFinished_ForTest();
 
     Context.MeleeComp->SimulateAttackStart_ForTest();
     TestEqual(TEXT("After 3rd attack(last attack), combo index wraps to (ComboIndex(2)+1)%ComboCount(3) = 0"), Context.MeleeComp->GetCurrentComboIndex_ForTest(), 0);
@@ -144,10 +142,10 @@ bool FMeleeComboTimeoutResetTest::RunTest(const FString& Parameters)
     VremMeleeTestHelper::FMeleeTestContext Context = VremMeleeTestHelper::CreateTestContext(World, 3 /* ComboCount */);
 
     Context.MeleeComp->SimulateAttackStart_ForTest();
-    Context.MeleeComp->TriggerAttackDurationFinished_ForTest();
     TestEqual(TEXT("after attackstart: Combo index = 1"), Context.MeleeComp->GetCurrentComboIndex_ForTest(), 1);
 
     Context.MeleeComp->TriggerCancelTimeStarted_ForTest();
+    Context.MeleeComp->TriggerAttackDurationFinished_ForTest();
     TestEqual(TEXT("combo window timeout: Combo index reset to 0"), Context.MeleeComp->GetCurrentComboIndex_ForTest(), 0);
 
     Context.MeleeComp->SimulateAttackStart_ForTest();
