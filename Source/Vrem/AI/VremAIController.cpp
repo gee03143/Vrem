@@ -21,6 +21,8 @@ void AVremAIController::BeginPlay()
 {
 	Super::BeginPlay();
 
+	SetGenericTeamId(FGenericTeamId(TeamId));
+
 	if (IsValid(VremPerceptionComponent) == false || IsValid(SightConfig) == false)
 	{
 		UE_LOG(LogVremAI, Warning, TEXT("[%s] Perception falied to initialize: invalid component"), *GetName());
@@ -32,10 +34,9 @@ void AVremAIController::BeginPlay()
 	SightConfig->PeripheralVisionAngleDegrees = PeripheralVisionHalfAngleDegrees;
 	SightConfig->SetMaxAge(SightMaxAge);
 
-	// TODO : add faction, handle all actors as neutral for now.
 	SightConfig->DetectionByAffiliation.bDetectEnemies = true;
-	SightConfig->DetectionByAffiliation.bDetectNeutrals = true;
-	SightConfig->DetectionByAffiliation.bDetectFriendlies = true;
+	SightConfig->DetectionByAffiliation.bDetectNeutrals = false;
+	SightConfig->DetectionByAffiliation.bDetectFriendlies = false;
 
 	VremPerceptionComponent->ConfigureSense(*SightConfig);
 	VremPerceptionComponent->SetDominantSense(SightConfig->GetSenseImplementation());
@@ -63,10 +64,9 @@ void AVremAIController::Tick(float DeltaTime)
 		if (GetMoveStatus() != EPathFollowingStatus::Moving)
 		{
 			const EPathFollowingRequestResult::Type Result = MoveToActor(Target, AcceptanceRadius);
-			// Failed=0, AlreadyAtGoal=1, RequestSuccessful=2
 
+#if WITH_EDITOR
 			FString ResultString;
-
 			switch (Result)
 			{
 			case EPathFollowingRequestResult::AlreadyAtGoal:
@@ -81,8 +81,8 @@ void AVremAIController::Tick(float DeltaTime)
 			default:
 				break;
 			}
-
 			UE_LOG(LogVremAI, Log, TEXT("MoveToActor dist=%.0f result=%s"), Distance, *ResultString);
+#endif
 		}
 	}
 	else
@@ -116,12 +116,14 @@ void AVremAIController::OnTargetPerceptionUpdated(AActor* Actor, FAIStimulus Sti
 void AVremAIController::StartChasing(AActor* NewTarget)
 {
 	CurrentTarget = NewTarget;
+	SetFocus(NewTarget);
 	UE_LOG(LogVremAI, Log, TEXT("[%s] chase start: Target is [%s]"), *GetName(), *GetNameSafe(NewTarget));
 }
 
 void AVremAIController::StopChasing()
 {
 	UE_LOG(LogVremAI, Log, TEXT("[%s] stop chase"), *GetName());
+	ClearFocus(EAIFocusPriority::Gameplay);
 	CurrentTarget = nullptr;
 	StopMovement();
 }

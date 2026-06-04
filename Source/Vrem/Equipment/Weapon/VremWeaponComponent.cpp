@@ -229,8 +229,8 @@ void UVremWeaponComponent::StopFire()
 
 void UVremWeaponComponent::ExecuteFire()
 {
-	APlayerController* PC = Cast<APlayerController>(GetInstigatorController());
-	if (IsValid(PC) == false)
+	AController* Controller = GetInstigatorController();
+	if (IsValid(Controller) == false)
 	{
         UE_LOG(LogVremWeapon, Warning, TEXT("UVremWeaponComponent::ExecuteFire Controller is nullptr"));
 		return;
@@ -238,7 +238,7 @@ void UVremWeaponComponent::ExecuteFire()
 
 	FVector ViewOrigin;
 	FRotator ViewRotation;
-	PC->GetPlayerViewPoint(ViewOrigin, ViewRotation);
+	Controller->GetPlayerViewPoint(ViewOrigin, ViewRotation);
 
     // 스프레드 적용
     const float SpreadDegrees = GetCurrentSpread();

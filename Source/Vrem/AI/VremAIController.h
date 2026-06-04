@@ -53,6 +53,9 @@ protected:
 
 	UPROPERTY(EditDefaultsOnly, Category="Vrem|AI|Chase")
 	float RotationInterpSpeed = 8.f;
+
+	UPROPERTY(EditDefaultsOnly, Category="Vrem|AI|Faction")
+	uint8 TeamId = 1;
 	
 protected:
 	UFUNCTION()

@@ -5,6 +5,7 @@
 #include "CoreMinimal.h"
 #include "GameFramework/Character.h"
 #include "GameplayTagAssetInterface.h"
+#include "GenericTeamAgentInterface.h"
 #include "GameplayTagContainer.h"
 #include "Vrem/Equipment/Weapon/VremWeaponHandlerInterface.h"
 #include "VremCharacter.generated.h"
@@ -20,7 +21,7 @@ struct FRecoilProfile;
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FStateTagChangedDelegate, const FGameplayTag&, Tag);
 
 UCLASS()
-class VREM_API AVremCharacter : public ACharacter, public IGameplayTagAssetInterface, public IVremWeaponHandler
+class VREM_API AVremCharacter : public ACharacter, public IGameplayTagAssetInterface, public IVremWeaponHandler, public IGenericTeamAgentInterface
 {
 	GENERATED_BODY()
 
@@ -32,6 +33,10 @@ public:
 	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 
 	virtual void Tick(float DeltaTime) override;
+
+// ~IGenericTeamAgentInterface Begin
+	virtual FGenericTeamId GetGenericTeamId() const override;
+// ~IGenericTeamAgentInterface End
 
 #pragma region input
 public:	

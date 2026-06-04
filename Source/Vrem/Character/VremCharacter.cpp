@@ -115,6 +115,16 @@ void AVremCharacter::Tick(float DeltaTime)
 	UpdateMovementStateTags();
 }
 
+FGenericTeamId AVremCharacter::GetGenericTeamId() const
+{
+	if (const IGenericTeamAgentInterface* ControllerTeamAgent = Cast<const IGenericTeamAgentInterface>(GetController()))
+	{
+		return ControllerTeamAgent->GetGenericTeamId();
+	}
+
+	return FGenericTeamId::NoTeam;
+}
+
 inline void AVremCharacter::OnInputConfigLoaded(const UVremGameModeDefinition* InGameModeDefinition)
 {
 	CurrentInputConfig = InGameModeDefinition->PawnData->InputConfig;	// TODO: 이부분은 개선 여지가 있을 것 같다, Character가 GameModeDefinition 전체를 알 필요는 없다.
