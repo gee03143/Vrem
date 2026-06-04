@@ -19,7 +19,9 @@ public class Vrem : ModuleRules
 			"Networking",
 			"Niagara",
             "PhysicsCore",
-			"UMG"
+			"UMG",
+			"AIModule",
+			"NavigationSystem"
         });
 
 		PrivateDependencyModuleNames.AddRange(new string[] {  });

@@ -21,6 +21,7 @@ DECLARE_LOG_CATEGORY_EXTERN(LogVremEquipment, Log, All);
 DECLARE_LOG_CATEGORY_EXTERN(LogVremWeapon, Log, All);
 DECLARE_LOG_CATEGORY_EXTERN(LogVremDodge, Log, All);
 DECLARE_LOG_CATEGORY_EXTERN(LogVremSkill, Log, All);
+DECLARE_LOG_CATEGORY_EXTERN(LogVremAI, Log, All);
 
 inline FString GetNetModeString(const UWorld* WorldContext)
 {
