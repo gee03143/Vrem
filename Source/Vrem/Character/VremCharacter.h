@@ -8,6 +8,7 @@
 #include "GenericTeamAgentInterface.h"
 #include "GameplayTagContainer.h"
 #include "Vrem/Equipment/Weapon/VremWeaponHandlerInterface.h"
+#include "Vrem/Equipment/Weapon/VremCombatant.h"
 #include "VremCharacter.generated.h"
 
 class UVremGameModeDefinition;
@@ -21,7 +22,7 @@ struct FRecoilProfile;
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FStateTagChangedDelegate, const FGameplayTag&, Tag);
 
 UCLASS()
-class VREM_API AVremCharacter : public ACharacter, public IGameplayTagAssetInterface, public IVremWeaponHandler, public IGenericTeamAgentInterface
+class VREM_API AVremCharacter : public ACharacter, public IGameplayTagAssetInterface, public IVremWeaponHandler, public IGenericTeamAgentInterface, public IVremCombatant
 {
 	GENERATED_BODY()
 
@@ -38,6 +39,10 @@ public:
 	virtual FGenericTeamId GetGenericTeamId() const override;
 // ~IGenericTeamAgentInterface End
 
+	// ~IVremCombatant Begin
+	virtual void StartPrimaryFire() override;
+	virtual void StopPrimaryFire() override;
+	// ~IVremCombatant End
 #pragma region input
 public:	
 	// Called to bind functionality to input
