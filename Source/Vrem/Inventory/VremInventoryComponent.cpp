@@ -350,7 +350,7 @@ int32 UVremInventoryComponent::RemoveAmmo(FGameplayTag AmmoType, int32 Amount)
 	UItemFragment_Ammo* Probe = NewObject<UItemFragment_Ammo>(GetTransientPackage());
 	Probe->SetAmmoType(AmmoType);
 
-	// RemoveItemsByFragmentMatch ¾È¿¡¼­ HasAuthority Ã¼Å©ÇÔ
+	// RemoveItemsByFragmentMatch ì•ˆì—ì„œ HasAuthority ì²´í¬í•¨
 	return RemoveItemsByFragmentMatch(Probe, Amount);
 }
 

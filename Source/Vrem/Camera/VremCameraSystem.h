@@ -39,7 +39,7 @@ protected:
 	float TransientFOVKick = 0.f;
 	float TransientFOVRecoverSpeed = 8.f;
 
-	// camera shake¿ëµµ·Î ¸¸µé¾îµÎ±ä Çß´Âµ¥ ¹Ì»ç¿ë..
+	// camera shakeìš©ë„ë¡œ ë§Œë“¤ì–´ë‘ê¸´ í–ˆëŠ”ë° ë¯¸ì‚¬ìš©..
 	FVector TransientOffset = FVector::ZeroVector;
 	float TransientOffsetRecoverSpeed = 8.f;
 };

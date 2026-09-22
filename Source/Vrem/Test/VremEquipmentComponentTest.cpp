@@ -46,23 +46,23 @@ bool FEquipmentTryEquipItemTest::RunTest(const FString& Parameters)
 
     UVremEquipmentDefinition* Def = VremEquipmentTestHelper::CreateTestDefinition();
 
-    // ÀåÂø Àü È®ÀÎ
+    // ìž¥ì°© ì „ í™•ì¸
     TestEqual(TEXT("Initial equipment count should be 0"), EquipComp->GetEquipmentItemNum(), 0);
 
-    // ÀåÂø
+    // ìž¥ì°©
     EquipComp->TryEquipItem(Def, 1);
     TestEqual(TEXT("Equipment count should be 1 after equip"), EquipComp->GetEquipmentItemNum(), 1);
 
-    // ÀåÂø Á÷ÈÄ »óÅÂ´Â Holstered¿©¾ß ÇÔ
+    // ìž¥ì°© ì§í›„ ìƒíƒœëŠ” Holsteredì—¬ì•¼ í•¨
     EEquipmentState State = EquipComp->GetEquipmentStateAtSlot(1);
     TestEqual(TEXT("Initial state should be Stowed"), State, EEquipmentState::Stowed);
 
-    // °°Àº ½½·Ô¿¡ ´Ù½Ã ÀåÂø -> ±³Ã¼
+    // ê°™ì€ ìŠ¬ë¡¯ì— ë‹¤ì‹œ ìž¥ì°© -> êµì²´
     UVremEquipmentDefinition* Def2 = VremEquipmentTestHelper::CreateTestDefinition();
     EquipComp->TryEquipItem(Def2, 1);
     TestEqual(TEXT("Equipment count should still be 1 after replace"), EquipComp->GetEquipmentItemNum(), 1);
 
-    // ´Ù¸¥ ½½·Ô¿¡ ÀåÂø
+    // ë‹¤ë¥¸ ìŠ¬ë¡¯ì— ìž¥ì°©
     EquipComp->TryEquipItem(Def, 2);
     TestEqual(TEXT("Equipment count should be 2"), EquipComp->GetEquipmentItemNum(), 2);
 
@@ -85,7 +85,7 @@ bool FEquipmentTryUnequipItemTest::RunTest(const FString& Parameters)
     AActor* Actor = VremEquipmentTestHelper::CreateActorWithEquipment(World);
     UVremEquipmentComponent* EquipComp = Actor->FindComponentByClass<UVremEquipmentComponent>();
 
-    // ºó »óÅÂ¿¡¼­ ±³Ã¼ ½Ãµµ -> Å©·¡½Ã ¾ø¾î¾ß ÇÔ
+    // ë¹ˆ ìƒíƒœì—ì„œ êµì²´ ì‹œë„ -> í¬ëž˜ì‹œ ì—†ì–´ì•¼ í•¨
     EquipComp->SetCurrentWeapon(99);
     TestEqual(TEXT("Count should remain 0"), EquipComp->GetEquipmentItemNum(), 0);
 
@@ -94,11 +94,11 @@ bool FEquipmentTryUnequipItemTest::RunTest(const FString& Parameters)
     EquipComp->TryEquipItem(Def, 1);
     TestEqual(TEXT("Equipment count should be 1"), EquipComp->GetEquipmentItemNum(), 1);
 
-    // ÇØÁ¦
+    // í•´ì œ
     EquipComp->TryUnequipItem(1);
     TestEqual(TEXT("Equipment count should be 0 after unequip"), EquipComp->GetEquipmentItemNum(), 0);
 
-    // ¾ø´Â ½½·Ô ÇØÁ¦ ½Ãµµ -> Å©·¡½Ã ¾øÀÌ Åë°ú
+    // ì—†ëŠ” ìŠ¬ë¡¯ í•´ì œ ì‹œë„ -> í¬ëž˜ì‹œ ì—†ì´ í†µê³¼
     EquipComp->TryUnequipItem(99);
     TestEqual(TEXT("Equipment count should remain 0"), EquipComp->GetEquipmentItemNum(), 0);
 
@@ -121,20 +121,20 @@ bool FEquipmentSlotQueryTest::RunTest(const FString& Parameters)
     AActor* Actor = VremEquipmentTestHelper::CreateActorWithEquipment(World);
     UVremEquipmentComponent* EquipComp = Actor->FindComponentByClass<UVremEquipmentComponent>();
 
-    // ºó »óÅÂ
+    // ë¹ˆ ìƒíƒœ
     TestEqual(TEXT("Empty: No OnHand"), EquipComp->GetOnHandSlotIndex(), INDEX_NONE);
     TestEqual(TEXT("Empty: No Holstered"), EquipComp->GetHolsteredSlotIndex(), INDEX_NONE);
 
     UVremEquipmentDefinition* A = VremEquipmentTestHelper::CreateTestDefinition();
     EquipComp->TryEquipItem(A, 1);
 
-    // Stowed »óÅÂ¸¸ ÀÖÀ» ¶§
+    // Stowed ìƒíƒœë§Œ ìžˆì„ ë•Œ
     TestEqual(TEXT("Only Stowed: No OnHand"), EquipComp->GetOnHandSlotIndex(), INDEX_NONE);
 	TestEqual(TEXT("Only Stowed: No Holstered"), EquipComp->GetHolsteredSlotIndex(), INDEX_NONE);
 
     EquipComp->SetCurrentWeapon(1);
 
-    // A°¡ OnHand
+    // Aê°€ OnHand
     TestEqual(TEXT("OnHand slot is 1"), EquipComp->GetOnHandSlotIndex(), 1);
     TestEqual(TEXT("No Holstered yet"), EquipComp->GetHolsteredSlotIndex(), INDEX_NONE);
 
@@ -171,12 +171,12 @@ bool FEquipmentSetCurrentWeaponTest::RunTest(const FString& Parameters)
     EquipComp->OnEquipmentAttached.AddDynamic(Listener, &UVremEquipmentTestListener::HandleAttached);
     EquipComp->OnEquipmentDetached.AddDynamic(Listener, &UVremEquipmentTestListener::HandleDetached);
 
-    // ÀåÂø -> Stowed »óÅÂÀÌ¹Ç·Î Detached ¹ß»ý
+    // ìž¥ì°© -> Stowed ìƒíƒœì´ë¯€ë¡œ Detached ë°œìƒ
     EquipComp->TryEquipItem(Rifle, 1);
     TestEqual(TEXT("Detached should fire on initial equip (Stowed)"), Listener->DetachedCount, 1);
     TestEqual(TEXT("Slot 1 should be Stowed"), EquipComp->GetEquipmentStateAtSlot(1), EEquipmentState::Stowed);
 
-    // ½½·Ô 1À» ÇöÀç ¹«±â·Î ¼³Á¤
+    // ìŠ¬ë¡¯ 1ì„ í˜„ìž¬ ë¬´ê¸°ë¡œ ì„¤ì •
     EquipComp->SetCurrentWeapon(1);
     TestEqual(TEXT("Attached should fire on SetCurrentWeapon"), Listener->AttachedCount, 1);
     TestEqual(TEXT("Slot 1 should be OnHand"), EquipComp->GetEquipmentStateAtSlot(1), EEquipmentState::OnHand);
@@ -185,14 +185,14 @@ bool FEquipmentSetCurrentWeaponTest::RunTest(const FString& Parameters)
     TestEqual(TEXT("Detached should fire on initial equip (Stowed)"), Listener->DetachedCount, 2);
     TestEqual(TEXT("Slot 2 should be Stowed"), EquipComp->GetEquipmentStateAtSlot(2), EEquipmentState::Stowed);
     
-    // ´Ù¸¥ ½½·ÔÀ¸·Î ±³Ã¼ -> ÀÌÀü ¹«±â Detached
+    // ë‹¤ë¥¸ ìŠ¬ë¡¯ìœ¼ë¡œ êµì²´ -> ì´ì „ ë¬´ê¸° Detached
     EquipComp->SetCurrentWeapon(2);
     TestEqual(TEXT("Slot 1 should be Stowed"), EquipComp->GetEquipmentStateAtSlot(1), EEquipmentState::Stowed);
     TestEqual(TEXT("Slot 2 should be OnHand"), EquipComp->GetEquipmentStateAtSlot(2), EEquipmentState::OnHand);
     TestEqual(TEXT("Detached should fire for previous weapon"), Listener->DetachedCount, 3);
     TestEqual(TEXT("Attached should fire for new weapon"), Listener->AttachedCount, 2);
 
-    // Àåºñ ¼ö´Â º¯ÇÏÁö ¾Ê¾Æ¾ß ÇÔ
+    // ìž¥ë¹„ ìˆ˜ëŠ” ë³€í•˜ì§€ ì•Šì•„ì•¼ í•¨
     TestEqual(TEXT("Equipment count should remain 2"), EquipComp->GetEquipmentItemNum(), 2);
 
     VremTestHelper::DestroyTestWorld(World);
@@ -217,7 +217,7 @@ bool FEquipmentUnequipByDefinitionTest::RunTest(const FString& Parameters)
     UVremEquipmentDefinition* Def = VremEquipmentTestHelper::CreateTestDefinition();
     EquipComp->TryEquipItem(Def, 1);
 
-    // DefinitionÀ¸·Î ÇØÁ¦
+    // Definitionìœ¼ë¡œ í•´ì œ
     EquipComp->TryUnequipItem(Def);
     TestEqual(TEXT("Equipment count should be 0"), EquipComp->GetEquipmentItemNum(), 0);
 
@@ -238,17 +238,17 @@ bool FEquipmentReplicationSimTest::RunTest(const FString& Parameters)
 {
     UWorld* World = VremTestHelper::CreateTestWorld();
 
-    // ¼­¹ö ¾×ÅÍ + ÄÄÆ÷³ÍÆ®
+    // ì„œë²„ ì•¡í„° + ì»´í¬ë„ŒíŠ¸
     AActor* ServerActor = VremEquipmentTestHelper::CreateActorWithEquipment(World);
     UVremEquipmentComponent* ServerComp = ServerActor->FindComponentByClass<UVremEquipmentComponent>();
 
-    // Å¬¶óÀÌ¾ðÆ® ¾×ÅÍ + ÄÄÆ÷³ÍÆ® (°°Àº ¿ùµåÁö¸¸ º°µµ ÄÄÆ÷³ÍÆ®·Î ½Ã¹Ä·¹ÀÌ¼Ç)
+    // í´ë¼ì´ì–¸íŠ¸ ì•¡í„° + ì»´í¬ë„ŒíŠ¸ (ê°™ì€ ì›”ë“œì§€ë§Œ ë³„ë„ ì»´í¬ë„ŒíŠ¸ë¡œ ì‹œë®¬ë ˆì´ì…˜)
     AActor* ClientActor = VremEquipmentTestHelper::CreateActorWithEquipment(World);
     UVremEquipmentComponent* ClientComp = ClientActor->FindComponentByClass<UVremEquipmentComponent>();
 
     UVremEquipmentDefinition* Def = VremEquipmentTestHelper::CreateTestDefinition();
 
-    // ¼­¹ö¿¡¼­ ÀåÂø
+    // ì„œë²„ì—ì„œ ìž¥ì°©
     ServerComp->TryEquipItem(Def, 1);
     TestEqual(TEXT("Server should have 1 item"), ServerComp->GetEquipmentItemNum(), 1);
     TestEqual(TEXT("Client should have 0 items before replication"), ClientComp->GetEquipmentItemNum(), 0);
@@ -256,7 +256,7 @@ bool FEquipmentReplicationSimTest::RunTest(const FString& Parameters)
     ClientComp->SimulateReplicateFrom(ServerComp);
     TestEqual(TEXT("Client should have 1 item after replication"), ClientComp->GetEquipmentItemNum(), 1);
 
-    // º¹Á¦ ÈÄ Å¬¶óÀÌ¾ðÆ® Ãø EquipmentState¿ª½Ã °»½ÅµÇ¾î¾ß ÇÔ
+    // ë³µì œ í›„ í´ë¼ì´ì–¸íŠ¸ ì¸¡ EquipmentStateì—­ì‹œ ê°±ì‹ ë˜ì–´ì•¼ í•¨
     ServerComp->SetCurrentWeapon(1);
     ClientComp->SimulateReplicateFrom(ServerComp);
     TestEqual(TEXT("Client slot 1 should be OnHand after replication"), ClientComp->GetEquipmentStateAtSlot(1), EEquipmentState::OnHand);
@@ -290,7 +290,7 @@ bool FEquipmentSetCurrentWeaponHolsteredDestTest::RunTest(const FString& Paramet
     EquipComp->TryEquipItem(Knife, 2);  // Knife -> Stowed
     TestEqual(TEXT("Slot 2 should be Stowed"), EquipComp->GetEquipmentStateAtSlot(2), EEquipmentState::Stowed);
 
-    // Knife·Î ÀüÈ¯ÇÏ¸é¼­ RifleÀ» Holstered·Î º¸³¿
+    // Knifeë¡œ ì „í™˜í•˜ë©´ì„œ Rifleì„ Holsteredë¡œ ë³´ëƒ„
     EquipComp->SetCurrentWeapon(2, EEquipmentState::Holstered);
     TestEqual(TEXT("Slot 2 should be OnHand"), EquipComp->GetEquipmentStateAtSlot(2), EEquipmentState::OnHand);
     TestEqual(TEXT("Slot 1 should be Holstered"),EquipComp->GetEquipmentStateAtSlot(1), EEquipmentState::Holstered);
@@ -318,7 +318,7 @@ bool FEquipmentHolsteredDemotionTest::RunTest(const FString& Parameters)
     UVremEquipmentDefinition* B = VremEquipmentTestHelper::CreateTestDefinition();
     UVremEquipmentDefinition* C = VremEquipmentTestHelper::CreateTestDefinition();
 
-    // ÃÊ±â ¼¼ÆÃ: A(OnHand), B(Holstered), C(Stowed)
+    // ì´ˆê¸° ì„¸íŒ…: A(OnHand), B(Holstered), C(Stowed)
     EquipComp->TryEquipItem(A, 1);                               // A -> Stowed
     EquipComp->TryEquipItem(B, 2);                               // B -> Stowed
     EquipComp->TryEquipItem(C, 3);                               // C -> Stowed
@@ -329,7 +329,7 @@ bool FEquipmentHolsteredDemotionTest::RunTest(const FString& Parameters)
     TestEqual(TEXT("Initial Setting: B Holstered"), EquipComp->GetEquipmentStateAtSlot(2), EEquipmentState::Holstered);
     TestEqual(TEXT("Initial Setting: C Stowed"), EquipComp->GetEquipmentStateAtSlot(3), EEquipmentState::Stowed);
 
-    // ÀÌÁ¦ C¸¦ ÀåÂø ÈÄ OnHand Àåºñ¸¦ Holstered ·Î ¹Ð¾î³¿ (C -> OnHand, A -> Holstered, B -> Stowed)
+    // ì´ì œ Cë¥¼ ìž¥ì°© í›„ OnHand ìž¥ë¹„ë¥¼ Holstered ë¡œ ë°€ì–´ëƒ„ (C -> OnHand, A -> Holstered, B -> Stowed)
     EquipComp->SetCurrentWeapon(3, EEquipmentState::Holstered);
 
     TestEqual(TEXT("C OnHand"), EquipComp->GetEquipmentStateAtSlot(3), EEquipmentState::OnHand);
@@ -358,7 +358,7 @@ bool FEquipmentSwapHolsteredToOnHandTest::RunTest(const FString& Parameters)
     UVremEquipmentDefinition* A = VremEquipmentTestHelper::CreateTestDefinition();
     UVremEquipmentDefinition* B = VremEquipmentTestHelper::CreateTestDefinition();
 
-    // ÃÊ±â ¼¼ÆÃ: A(OnHand), B(Holstered) ¼¼ÆÃ
+    // ì´ˆê¸° ì„¸íŒ…: A(OnHand), B(Holstered) ì„¸íŒ…
     EquipComp->TryEquipItem(A, 1);
     EquipComp->TryEquipItem(B, 2);
     EquipComp->SetCurrentWeapon(2);  // B -> OnHand
@@ -366,7 +366,7 @@ bool FEquipmentSwapHolsteredToOnHandTest::RunTest(const FString& Parameters)
     TestEqual(TEXT("Initial Setting: A should be OnHand"), EquipComp->GetEquipmentStateAtSlot(1), EEquipmentState::OnHand);
     TestEqual(TEXT("Initial Setting: B should be Holstered"), EquipComp->GetEquipmentStateAtSlot(2), EEquipmentState::Holstered);
 
-    // Holster »óÅÂÀÇ B Àåºñ¸¦ OnHand·Î ÀÌµ¿ -> ¿ø·¡ OnHand »óÅÂ¿´´ø A Àåºñ°¡ Holster·Î ÀÌµ¿
+    // Holster ìƒíƒœì˜ B ìž¥ë¹„ë¥¼ OnHandë¡œ ì´ë™ -> ì›ëž˜ OnHand ìƒíƒœì˜€ë˜ A ìž¥ë¹„ê°€ Holsterë¡œ ì´ë™
     EquipComp->SetCurrentWeapon(2, EEquipmentState::Holstered);
 
     TestEqual(TEXT("B (was Holstered) should now be OnHand"), EquipComp->GetEquipmentStateAtSlot(2), EEquipmentState::OnHand);

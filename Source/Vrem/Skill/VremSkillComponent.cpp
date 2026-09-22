@@ -150,7 +150,7 @@ void UVremSkillComponent::TickComponent(float DeltaTime, enum ELevelTick TickTyp
 		return;
 	}
 
-	CurrentTargetingContext = BuildActivationContext();   // Á¶ÁØ À§Ä¡/¹æÇâ °»½Å
+	CurrentTargetingContext = BuildActivationContext();   // ì¡°ì¤€ ìœ„ì¹˜/ë°©í–¥ ê°±ì‹ 
 
 	const UVremSkillBehavior* CDO = Def->GetBehaviorCDO();
 	if (IsValid(CDO))
@@ -406,7 +406,7 @@ void UVremSkillComponent::ConfirmTargetingLocal()
 		return;
 	}
 
-	CurrentTargetingContext = BuildActivationContext();   // È®Á¤ ½ÃÁ¡ °»½Å
+	CurrentTargetingContext = BuildActivationContext();   // í™•ì • ì‹œì  ê°±ì‹ 
 
 	const UVremSkillBehavior* CDO = Def->GetBehaviorCDO();
 	if (IsValid(CDO))
@@ -414,7 +414,7 @@ void UVremSkillComponent::ConfirmTargetingLocal()
 		CDO->EndTargeting(CurrentTargetingContext, Def, true /*bConfirmed*/);
 	}
 
-	// »óÅÂ Á¤¸® ÈÄ ½ÇÁ¦ ¹ßµ¿
+	// ìƒíƒœ ì •ë¦¬ í›„ ì‹¤ì œ ë°œë™
 	const FVremSkillActivationContext FinalContext = CurrentTargetingContext;
 	CurrentTargetingSlotIndex = INDEX_NONE;
 	SetComponentTickEnabled(false);

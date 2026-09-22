@@ -68,7 +68,7 @@ bool UVremSkillFunctionLibrary::PredictGrenadeTrajectory(
         return false;
     }
 
-    // FPredictProjectilePathParams »ı¼ºÀÚ (¹İÁö¸§/½ÃÀÛ/¼Óµµ/½Ã°£/Ã¤³Î/¹«½Ã¾×ÅÍ)
+    // FPredictProjectilePathParams ìƒì„±ì (ë°˜ì§€ë¦„/ì‹œì‘/ì†ë„/ì‹œê°„/ì±„ë„/ë¬´ì‹œì•¡í„°)
     FPredictProjectilePathParams PredictParams(
         ProjectileRadius,
         LaunchLocation,

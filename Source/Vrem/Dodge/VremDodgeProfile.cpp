@@ -16,7 +16,7 @@ const FDodgeSequence& UVremDodgeProfile::GetDodgeSequence(EDodgeDirection Direct
     case EDodgeDirection::Right:    
         return RightSequence;
     default:                         
-        return BackwardSequence;  // ÀÔ·Â ¾øÀ» ½Ã ÈÄ¹æ µğÆúÆ®
+        return BackwardSequence;  // ì…ë ¥ ì—†ì„ ì‹œ í›„ë°© ë””í´íŠ¸
     }
 }
 
@@ -30,7 +30,7 @@ void UVremDodgeProfile::PostEditChangeProperty(FPropertyChangedEvent& PropertyCh
             // ForceDuration <= DodgeDuration
             Seq.ForceDuration = FMath::Min(Seq.ForceDuration, Seq.DodgeDuration);
 
-            // i-frameÀº DodgeDuration ¾È¿¡ Æ÷ÇÔµÇ¾î¾ß ÇÔ
+            // i-frameì€ DodgeDuration ì•ˆì— í¬í•¨ë˜ì–´ì•¼ í•¨
             Seq.IFrameStartTime = FMath::Min(Seq.IFrameStartTime, Seq.DodgeDuration);
             Seq.IFrameEndTime = FMath::Min(Seq.IFrameEndTime, Seq.DodgeDuration);
 

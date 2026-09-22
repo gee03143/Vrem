@@ -26,7 +26,7 @@ struct FSkillEntry : public FFastArraySerializerItem
     UPROPERTY()
     int32 SkillSlotIndex = INDEX_NONE;
 
-    // Local Cooldown ¡æ∑· Ω√∞¢ (World seconds)
+    // Local Cooldown Ï¢ÖÎ£å ÏãúÍ∞Å (World seconds)
     UPROPERTY(NotReplicated, Transient)
     float CooldownEndTime = 0.f;
 

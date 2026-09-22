@@ -19,7 +19,7 @@ class VREM_API IVremWeaponHandler
     GENERATED_BODY()
 
 public:
-    // ¿ø°Å¸® ¹«±â ¹ß»ç ½Ã È£Ãâ
+    // ì›ê±°ë¦¬ ë¬´ê¸° ë°œì‚¬ ì‹œ í˜¸ì¶œ
     virtual void OnWeaponFired(const FRecoilProfile& RecoilProfile) = 0;
 
     virtual void OnMeleeAttackStarted(int32 ComboIndex) = 0;

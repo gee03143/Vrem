@@ -33,17 +33,17 @@ struct FHitImpactData
 };
 
 /*
-AttackMontage:  [¦¡ swing ¦¡][¦¡¦¡ return to idle ¦¡¦¡]
-                            ¡è
-                     ¿©±â¼­ºÎÅÍ Äµ½½ °¡´É (=´ÙÀ½ ½ÃÄö½º ÁøÇà)
+AttackMontage:  [â”€ swing â”€][â”€â”€ return to idle â”€â”€]
+                            â†‘
+                     ì—¬ê¸°ì„œë¶€í„° ìº”ìŠ¬ ê°€ëŠ¥ (=ë‹¤ìŒ ì‹œí€€ìŠ¤ ì§„í–‰)
 
-				0 ¦¡¦¡¦¡ CancelTime ¦¡¦¡¦¡ AttackDuration ¦¡¡æ
-				¦¢        ¦¢                ¦¢
-				¦¢ commit ±¸°£      cancel ±¸°£
-				¦¢ ÀÔ·Â ¹«½Ã        ÀÔ·Â = ´ÙÀ½ ÄŞº¸
-				¦¢
-				¦¢ ¡ç ¿¬Å¸ÇØµµ commit µ¿¾È¿£ ¹«½ÃµÊ
-				¦¢   ´ÙÀ½ ½ÃÄö½º·Î ÀÇµµÄ¡ ¾Ê°Ô ¾È ³Ñ¾î°¨
+				0 â”€â”€â”€ CancelTime â”€â”€â”€ AttackDuration â”€â†’
+				â”‚        â”‚                â”‚
+				â”‚ commit êµ¬ê°„      cancel êµ¬ê°„
+				â”‚ ì…ë ¥ ë¬´ì‹œ        ì…ë ¥ = ë‹¤ìŒ ì½¤ë³´
+				â”‚
+				â”‚ â† ì—°íƒ€í•´ë„ commit ë™ì•ˆì—” ë¬´ì‹œë¨
+				â”‚   ë‹¤ìŒ ì‹œí€€ìŠ¤ë¡œ ì˜ë„ì¹˜ ì•Šê²Œ ì•ˆ ë„˜ì–´ê°
 */
 
 USTRUCT(BlueprintType)
@@ -63,18 +63,18 @@ struct FAttackSequence
     UPROPERTY(EditDefaultsOnly, Category = "Attack", meta = (ClampMin = "0.0"))
     float TraceRadius = 40.f;
 
-    // ¼­¹ö¿¡¼­ È÷Æ® ÆÇÁ¤ÀÌ ¹ßµ¿ÇÏ´Â ½ÃÁ¡
+    // ì„œë²„ì—ì„œ íˆíŠ¸ íŒì •ì´ ë°œë™í•˜ëŠ” ì‹œì 
     UPROPERTY(EditDefaultsOnly, Category = "Attack", meta = (ClampMin = "0.0"))
     float HitTime = 0.2f;
 
-    // °ø°İ ¸ùÅ¸ÁÖÀÇ ÀüÃ¼ ±æÀÌ (Swing + Return to Idle)
+    // ê³µê²© ëª½íƒ€ì£¼ì˜ ì „ì²´ ê¸¸ì´ (Swing + Return to Idle)
     UPROPERTY(EditDefaultsOnly, Category = "Attack|Combo", meta = (ClampMin = "0.0"))
     float AttackDuration = 0.5f;
 
-    // °ø°İ ½ÃÀÛ ÈÄ ´ÙÀ½ ÄŞº¸·Î Äµ½½ °¡´ÉÇÑ ½ÃÁ¡
-    // Swing Á¾·á/ Return to Idle ½ÃÀÛ ÁöÁ¡
-    // ÀÌ ½ÃÁ¡ ÀÌÀüÀÇ ÀÔ·ÂÀº ¹«½Ã
-    // ÀÌÈÄ ÀÔ·ÂÀº Return to IdleÀ» Äµ½½ÇÏ°í ´ÙÀ½ ½ÃÄı½º·Î ÀÌÇà
+    // ê³µê²© ì‹œì‘ í›„ ë‹¤ìŒ ì½¤ë³´ë¡œ ìº”ìŠ¬ ê°€ëŠ¥í•œ ì‹œì 
+    // Swing ì¢…ë£Œ/ Return to Idle ì‹œì‘ ì§€ì 
+    // ì´ ì‹œì  ì´ì „ì˜ ì…ë ¥ì€ ë¬´ì‹œ
+    // ì´í›„ ì…ë ¥ì€ Return to Idleì„ ìº”ìŠ¬í•˜ê³  ë‹¤ìŒ ì‹œí€¸ìŠ¤ë¡œ ì´í–‰
     UPROPERTY(EditDefaultsOnly, Category = "Attack|Combo", meta=(ClampMin="0.0"))
     float CancelTime = 0.4f;
 

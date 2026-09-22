@@ -16,7 +16,7 @@ void AVremEquipmentActor::BeginPlay()
 {
     Super::BeginPlay();
 
-    // Å¬¶óÀÌ¾ğÆ®¿¡¼­¸¸ - º¹Á¦ µµÂø ½Ã EquipmentComponent¿¡ ¾Ë¸²
+    // í´ë¼ì´ì–¸íŠ¸ì—ì„œë§Œ - ë³µì œ ë„ì°© ì‹œ EquipmentComponentì— ì•Œë¦¼
     if (HasAuthority() == false)
     {
         AActor* OwnerActor = GetAttachParentActor();

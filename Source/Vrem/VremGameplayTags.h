@@ -24,8 +24,8 @@ namespace FVremGameplayTags
 	UE_DECLARE_GAMEPLAY_TAG_EXTERN(State_Aiming_Scoped);
 	UE_DECLARE_GAMEPLAY_TAG_EXTERN(State_Movement_Moving);
 	UE_DECLARE_GAMEPLAY_TAG_EXTERN(State_Movement_InAir);
-	UE_DECLARE_GAMEPLAY_TAG_EXTERN(State_Combat_MeleeAttacking);  // ±ÙÁ¢ °ø°İ ¸ğ¼Ç Áß
-	UE_DECLARE_GAMEPLAY_TAG_EXTERN(State_Combat_MeleeMode);		// ¼Õ¿¡ ±ÙÁ¢ ¹«±â°¡ µé·Á ÀÖÀ½
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(State_Combat_MeleeAttacking);  // ê·¼ì ‘ ê³µê²© ëª¨ì…˜ ì¤‘
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(State_Combat_MeleeMode);		// ì†ì— ê·¼ì ‘ ë¬´ê¸°ê°€ ë“¤ë ¤ ìˆìŒ
 
 	//items
 	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Item_Ammo_Heavy);

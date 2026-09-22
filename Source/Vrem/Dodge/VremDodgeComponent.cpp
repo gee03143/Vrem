@@ -99,7 +99,7 @@ void UVremDodgeComponent::MulticastOnDodge_Implementation(EDodgeDirection Direct
 	APawn* OwnerPawn = Cast<APawn>(Owner);
 	if (IsValid(OwnerPawn) && OwnerPawn->IsLocallyControlled())
 	{
-		// ÀÌ¹Ì ExecuteDodge¿¡¼­ ¸ùÅ¸ÁÖ Àç»ıÇÔ
+		// ì´ë¯¸ ExecuteDodgeì—ì„œ ëª½íƒ€ì£¼ ì¬ìƒí•¨
 		return;
 	}
 

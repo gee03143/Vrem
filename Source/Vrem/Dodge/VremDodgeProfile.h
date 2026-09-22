@@ -20,14 +20,14 @@ enum class EDodgeDirection : uint8
 /*
 * 
 * RootMotionSource_ConstantForce
-* - WorldDir x ForceStrength ÀÇ force¸¦ ForceDurationµ¿¾È Àû¿ë
-* - Montage¿¡´Â rootmotion off
+* - WorldDir x ForceStrength ì˜ forceë¥¼ ForceDurationë™ì•ˆ ì ìš©
+* - Montageì—ëŠ” rootmotion off
 * 
 * Timing : 
 * 0 -----------ForceDuration------DodgeDuration----------->DodgeDuration + Cooldown
 * |					|					|								|
-* | force Àû¿ë   force Á¾·á			commit Á¾·á					´ÙÀ½ È¸ÇÇ °¡´É
-* |									(´Ù¸¥ ÀÔ·Â ¹«½Ã)
+* | force ì ìš©   force ì¢…ë£Œ			commit ì¢…ë£Œ					ë‹¤ìŒ íšŒí”¼ ê°€ëŠ¥
+* |									(ë‹¤ë¥¸ ì…ë ¥ ë¬´ì‹œ)
 */
 USTRUCT(BlueprintType)
 struct FDodgeSequence
@@ -45,19 +45,19 @@ struct FDodgeSequence
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Movement", meta = (ClampMin = 0.0f))
 	float ForceDuration = 0.25f;
 
-	// È¸ÇÇ ½ÃÀÛºÎÅÍ ¿©±â±îÁö ´Ù¸¥ ÀÔ·Â ¹«½Ã
+	// íšŒí”¼ ì‹œì‘ë¶€í„° ì—¬ê¸°ê¹Œì§€ ë‹¤ë¥¸ ì…ë ¥ ë¬´ì‹œ
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Timing", meta = (ClampMin = 0.0f))
 	float DodgeDuration = 0.4f;
 
-	// DodgeDurationÀÌ ³¡³ª°í DodgeCooldown¸¸Å­ ½Ã°£ÀÌ Áö³ª¸é ´ÙÀ½ È¸ÇÇ ½ÃÀÛ °¡´É
+	// DodgeDurationì´ ëë‚˜ê³  DodgeCooldownë§Œí¼ ì‹œê°„ì´ ì§€ë‚˜ë©´ ë‹¤ìŒ íšŒí”¼ ì‹œì‘ ê°€ëŠ¥
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Timing", meta = (ClampMin = 0.0f))
 	float DodgeCooldown = 0.5f;
 
-	// È¸ÇÇ ½ÃÀÛ ÈÄ ¹«Àû ÇÁ·¹ÀÓ ÁøÀÔ ½ÃÁ¡
+	// íšŒí”¼ ì‹œì‘ í›„ ë¬´ì  í”„ë ˆì„ ì§„ì… ì‹œì 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "i-frame", meta = (ClampMin = 0.0f))
 	float IFrameStartTime = 0.05f;
 
-	// È¸ÇÇ ½ÃÀÛ ÈÄ ¹«Àû ÇÁ·¹ÀÓ Á¾·á ½ÃÁ¡
+	// íšŒí”¼ ì‹œì‘ í›„ ë¬´ì  í”„ë ˆì„ ì¢…ë£Œ ì‹œì 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "i-frame", meta = (ClampMin = 0.0f))
 	float IFrameEndTime = 0.3f;
 };

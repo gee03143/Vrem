@@ -89,8 +89,8 @@ public:
 	UFUNCTION(BlueprintCallable, BlueprintPure, Category="Vrem|Item", meta=(DeterminesOutputType="FragmentClass"))
 	UItemFragment* FindFragmentByClass(TSubclassOf<UItemFragment> FragmentClass) const;
 
-	// === µ¿Àû »óÅÂ (stats) ===
-    // ¸Å°ÅÁø ÀÜÅº, °­È­ ·¹º§, ³»±¸µµ µî *·±Å¸ÀÓ µ¿Àû »óÅÂ*. Tag Å°·Î Ä«Å»·Î±×È­.
+	// === ë™ì  ìƒíƒœ (stats) ===
+    // ë§¤ê±°ì§„ ì”íƒ„, ê°•í™” ë ˆë²¨, ë‚´êµ¬ë„ ë“± *ëŸ°íƒ€ì„ ë™ì  ìƒíƒœ*. Tag í‚¤ë¡œ ì¹´íƒˆë¡œê·¸í™”.
     UFUNCTION(BlueprintPure, Category = "Vrem|Item|State")
     int32 GetStateInt(FGameplayTag Key, int32 Default = -1) const;
 

@@ -14,9 +14,9 @@ class AVremEquipmentActor;
 UENUM(BlueprintType)
 enum class EEquipmentState : uint8
 {
-	OnHand,      // ¼Õ¿¡ µé°í »ç¿ë Áß
-	Holstered,   // È¦½ºÅÍ¿¡ ÀÖÀ½ (Áï½Ã ²¨³¾ ¼ö ÀÖ´Â ÁØºñ »óÅÂ)
-	Stowed,      // º¸°ü Áß (2Â÷ ÀúÀå)
+	OnHand,      // ì†ì— ë“¤ê³  ì‚¬ìš© ì¤‘
+	Holstered,   // í™€ìŠ¤í„°ì— ìˆìŒ (ì¦‰ì‹œ êº¼ë‚¼ ìˆ˜ ìˆëŠ” ì¤€ë¹„ ìƒíƒœ)
+	Stowed,      // ë³´ê´€ ì¤‘ (2ì°¨ ì €ì¥)
 	NUM_EQUIPMENTSTATE
 };
 

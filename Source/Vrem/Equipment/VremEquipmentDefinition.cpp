@@ -24,7 +24,7 @@ void UVremEquipmentInstance::Initialize(const UVremEquipmentDefinition* InEquipm
 
 void UVremEquipmentInstance::Cleanup()
 {
-	// EquipmentActor´Â ¼­¹ö º¹Á¦ÀÌ¹Ç·Î, ¼­¹ö¿¡¼­¸¸ Á¦°Å
+	// EquipmentActorëŠ” ì„œë²„ ë³µì œì´ë¯€ë¡œ, ì„œë²„ì—ì„œë§Œ ì œê±°
 	if (IsValid(EquipmentActor) && ParentActor.IsValid() && ParentActor->HasAuthority())
 	{
 		EquipmentActor->Destroy();
@@ -111,7 +111,7 @@ void UVremEquipmentInstance::SpawnEquipmentActor()
 		return;
 	}
 
-	// SoftClass ¡æ Load
+	// SoftClass â†’ Load
 	UClass* ActorClass = EquipmentDefinition->EquipmentActorClass.LoadSynchronous();
 	if (IsValid(ActorClass) == false)
 	{
@@ -165,7 +165,7 @@ void UVremEquipmentInstance::AttachToSocket(const FName& SocketName, const FTran
 		);
 	}
 
-	// Offset Àû¿ë
+	// Offset ì ìš©
 	EquipmentActor->SetActorRelativeTransform(Offset);
 }
 

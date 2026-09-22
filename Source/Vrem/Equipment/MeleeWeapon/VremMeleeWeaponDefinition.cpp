@@ -12,14 +12,14 @@ void UVremMeleeWeaponDefinition::PostEditChangeProperty(FPropertyChangedEvent& P
 
     for (FAttackSequence& Seq : MeleeProfile.AttackSequences)
     {
-        // CancelTime Àº AttackDuration º¸´Ù ÀÛ¾Æ¾ß ÀÇ¹Ì ÀÖÀ½
+        // CancelTime ì€ AttackDuration ë³´ë‹¤ ì‘ì•„ì•¼ ì˜ë¯¸ ìˆìŒ
         Seq.CancelTime = FMath::Min(Seq.CancelTime, Seq.AttackDuration);
 
-        // HitTime Àº AttackDuration º¸´Ù ÀÛ¾Æ¾ß ÀÇ¹Ì ÀÖÀ½
+        // HitTime ì€ AttackDuration ë³´ë‹¤ ì‘ì•„ì•¼ ì˜ë¯¸ ìˆìŒ
         Seq.HitTime = FMath::Min(Seq.HitTime, Seq.AttackDuration);
 
-        // ÀÏ´Ü CancelTime < HitTimeÀÎ °æ¿ì¸¦ Çã¿ëÀº ÇØ µÒ
-        // °¡±ŞÀû HitTime < CancelTime < AttackDurationÀÌ µÇµµ·Ï ±¸¼º, HitTimeÀÌ CancelTimeº¸´Ù Å©¸é, µ¥¹ÌÁö ÆÇÁ¤ Àü¿¡ Äµ½½ÀÌ °¡´ÉÇÔ
+        // ì¼ë‹¨ CancelTime < HitTimeì¸ ê²½ìš°ë¥¼ í—ˆìš©ì€ í•´ ë‘ 
+        // ê°€ê¸‰ì  HitTime < CancelTime < AttackDurationì´ ë˜ë„ë¡ êµ¬ì„±, HitTimeì´ CancelTimeë³´ë‹¤ í¬ë©´, ë°ë¯¸ì§€ íŒì • ì „ì— ìº”ìŠ¬ì´ ê°€ëŠ¥í•¨
     }
 }
 #endif

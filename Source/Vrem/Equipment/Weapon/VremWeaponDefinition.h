@@ -22,23 +22,23 @@ struct FRecoilProfile
 {
     GENERATED_BODY()
 
-    // ¹ß´ç ¼öÁ÷ ¹İµ¿ (µµ ´ÜÀ§, ¾ç¼ö = Á¶ÁØ¼±ÀÌ À§·Î ¿Ã¶ó°¨)
+    // ë°œë‹¹ ìˆ˜ì§ ë°˜ë™ (ë„ ë‹¨ìœ„, ì–‘ìˆ˜ = ì¡°ì¤€ì„ ì´ ìœ„ë¡œ ì˜¬ë¼ê°)
     UPROPERTY(EditDefaultsOnly, Category = "Recoil")
     float VerticalKick = 1.5f;
 
-    // ¹ß´ç ¼öÆò ¹İµ¿ (µµ ´ÜÀ§, ¡¾¹üÀ§·Î ·£´ı)
+    // ë°œë‹¹ ìˆ˜í‰ ë°˜ë™ (ë„ ë‹¨ìœ„, Â±ë²”ìœ„ë¡œ ëœë¤)
     UPROPERTY(EditDefaultsOnly, Category = "Recoil")
     float HorizontalKick = 0.5f;
 
-    // ¼öÁ÷ ¹İµ¿ ·£´ı ÆíÂ÷ (VerticalKick ±âÁØ ¡¾¹üÀ§)
+    // ìˆ˜ì§ ë°˜ë™ ëœë¤ í¸ì°¨ (VerticalKick ê¸°ì¤€ Â±ë²”ìœ„)
     UPROPERTY(EditDefaultsOnly, Category = "Recoil")
     float VerticalVariance = 0.3f;
 
-    // Ä«¸Ş¶ó FOV ÆİÄ¡ (À½¼ö = ¼ø°£ ÁÜÀÎ, ¾ç¼ö = ÁÜ¾Æ¿ô)
+    // ì¹´ë©”ë¼ FOV í€ì¹˜ (ìŒìˆ˜ = ìˆœê°„ ì¤Œì¸, ì–‘ìˆ˜ = ì¤Œì•„ì›ƒ)
     UPROPERTY(EditDefaultsOnly, Category = "Recoil|Camera")
     float FOVKick = -2.0f;
 
-    // FOV º¹±Í ¼Óµµ (ÃÊ´ç º¸°£ ¼Óµµ)
+    // FOV ë³µê·€ ì†ë„ (ì´ˆë‹¹ ë³´ê°„ ì†ë„)
     UPROPERTY(EditDefaultsOnly, Category = "Recoil|Camera")
     float FOVRecoverSpeed = 8.0f;
 };
@@ -48,28 +48,28 @@ struct FSpreadProfile
 {
     GENERATED_BODY()
 
-    // ±âº» ½ºÇÁ·¹µå (µµ ´ÜÀ§, ÇÑÂÊ ¹İ°¢)
-    // ¿¹: 1.0 ¡æ ÃÖ´ë ¡¾1µµ ¹üÀ§·Î ·£´ı
+    // ê¸°ë³¸ ìŠ¤í”„ë ˆë“œ (ë„ ë‹¨ìœ„, í•œìª½ ë°˜ê°)
+    // ì˜ˆ: 1.0 â†’ ìµœëŒ€ Â±1ë„ ë²”ìœ„ë¡œ ëœë¤
     UPROPERTY(EditDefaultsOnly, Category = "Spread")
     float BaseSpread = 1.0f;
 
-    // ÀÌµ¿ ½Ã ½ºÇÁ·¹µå ¹èÀ²
+    // ì´ë™ ì‹œ ìŠ¤í”„ë ˆë“œ ë°°ìœ¨
     UPROPERTY(EditDefaultsOnly, Category = "Spread", meta = (ClampMin = "0.0"))
     float MovingSpreadMultiplier = 2.0f;
 
-    // °øÁß »óÅÂ ½ºÇÁ·¹µå ¹èÀ²
+    // ê³µì¤‘ ìƒíƒœ ìŠ¤í”„ë ˆë“œ ë°°ìœ¨
     UPROPERTY(EditDefaultsOnly, Category = "Spread", meta = (ClampMin = "0.0"))
     float InAirSpreadMultiplier = 3.0f;
 
-    // ¹ß»ç ½Ã ´©ÀûµÇ´Â ½ºÇÁ·¹µå (ºí·ë)
+    // ë°œì‚¬ ì‹œ ëˆ„ì ë˜ëŠ” ìŠ¤í”„ë ˆë“œ (ë¸”ë£¸)
     UPROPERTY(EditDefaultsOnly, Category = "Spread|Bloom")
     float BloomPerShot = 0.5f;
 
-    // ºí·ë ÃÖ´ëÄ¡ (´©Àû ÇÑ°è)
+    // ë¸”ë£¸ ìµœëŒ€ì¹˜ (ëˆ„ì  í•œê³„)
     UPROPERTY(EditDefaultsOnly, Category = "Spread|Bloom")
     float MaxBloom = 5.0f;
 
-    // ºí·ë °¨¼Ò ¼Óµµ (ÃÊ´ç °¨¼Ò µµ)
+    // ë¸”ë£¸ ê°ì†Œ ì†ë„ (ì´ˆë‹¹ ê°ì†Œ ë„)
     UPROPERTY(EditDefaultsOnly, Category = "Spread|Bloom")
     float BloomRecoverSpeed = 3.0f;
 };
@@ -84,7 +84,7 @@ public:
     EWeaponFireMode FireMode = EWeaponFireMode::SemiAuto;
 
     UPROPERTY(EditDefaultsOnly, Category = "Firing")
-    float FireRate = 600.f;  // ºĞ´ç ¹ß»ç ¼ö (RPM)
+    float FireRate = 600.f;  // ë¶„ë‹¹ ë°œì‚¬ ìˆ˜ (RPM)
 
     UPROPERTY(EditDefaultsOnly, Category = "Firing")
     float Range = 10000.f;
@@ -134,6 +134,6 @@ public:
     UPROPERTY(EditDefaultsOnly, Category = "Ammo")
     float ReloadTime = 2.0f;
 
-    // ¹ß»ç °£°İ (ÃÊ) °è»ê
+    // ë°œì‚¬ ê°„ê²© (ì´ˆ) ê³„ì‚°
     float GetFireInterval() const { return 60.f / FireRate; }
 };

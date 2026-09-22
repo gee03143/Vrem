@@ -75,7 +75,7 @@ void AVremAIController::OnTargetPerceptionUpdated(AActor* Actor, FAIStimulus Sti
 	}
 	else if (CurrentTarget.Get() == Actor)
 	{
-		// ÇöÀç Å¸°ÙÀ» ³õÄ§ ¡æ Áö¿¬ ÈÄ Ãß°İ Æ÷±â.
+		// í˜„ì¬ íƒ€ê²Ÿì„ ë†“ì¹¨ â†’ ì§€ì—° í›„ ì¶”ê²© í¬ê¸°.
 		GetWorldTimerManager().SetTimer(
 			LoseInterestTimerHandle, this, &AVremAIController::ClearTarget,
 			LoseInterestDelay, false);
