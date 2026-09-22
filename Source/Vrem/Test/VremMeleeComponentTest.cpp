@@ -117,14 +117,24 @@ bool FMeleeComboProgressionTest::RunTest(const FString& Parameters)
     UWorld* World = VremTestHelper::CreateTestWorld();
     VremMeleeTestHelper::FMeleeTestContext Context = VremMeleeTestHelper::CreateTestContext(World, 3 /* ComboCount */);
 
+    // 콤보는 캔슬 윈도우(CancelTime ~ AttackDuration) 안에서 다음 입력을 받아야
+    // 이어진다. 공격을 시작할 때마다 bCanCancel 이 false 로 돌아가므로, 매 단계마다
+    // 캔슬 윈도우 진입을 거쳐야 실제 플로우와 같아진다.
     Context.MeleeComp->SimulateAttackStart_ForTest();
     TestEqual(TEXT("After 1st attack, combo index advances to 1"), Context.MeleeComp->GetCurrentComboIndex_ForTest(), 1);
 
+    Context.MeleeComp->TriggerCancelTimeStarted_ForTest();
     Context.MeleeComp->SimulateAttackStart_ForTest();
     TestEqual(TEXT("After 2nd attack, combo index advances to 2"), Context.MeleeComp->GetCurrentComboIndex_ForTest(), 2);
 
+    Context.MeleeComp->TriggerCancelTimeStarted_ForTest();
     Context.MeleeComp->SimulateAttackStart_ForTest();
     TestEqual(TEXT("After 3rd attack(last attack), combo index wraps to (ComboIndex(2)+1)%ComboCount(3) = 0"), Context.MeleeComp->GetCurrentComboIndex_ForTest(), 0);
+
+    // 캔슬 윈도우에 들어가지 않은 입력은 실제 경로와 같이 막혀야 한다.
+    TestFalse(TEXT("bCanCancel is cleared by the attack that just started"), Context.MeleeComp->CanCancel_ForTest());
+    Context.MeleeComp->SimulateAttackStart_ForTest();
+    TestEqual(TEXT("Input outside the cancel window does not advance the combo"), Context.MeleeComp->GetCurrentComboIndex_ForTest(), 0);
 
     VremTestHelper::DestroyTestWorld(World);
     return true;

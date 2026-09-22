@@ -14,7 +14,7 @@
 #include "Components/SkeletalMeshComponent.h"
 #include "Camera/CameraShakeBase.h"
 
-// µğ¹ö±× CVar (¹«±â ½Ã½ºÅÛ°ú ³×ÀÓ½ºÆäÀÌ½º ÀÏ°ü¼º À¯Áö)
+// ë””ë²„ê·¸ CVar (ë¬´ê¸° ì‹œìŠ¤í…œê³¼ ë„¤ì„ìŠ¤í˜ì´ìŠ¤ ì¼ê´€ì„± ìœ ì§€)
 static TAutoConsoleVariable<int32> CVarDebugMeleeAttack(
     TEXT("vrem.DebugMeleeAttack"),
     0,
@@ -122,10 +122,10 @@ void UVremMeleeComponent::ExecuteMeleeAttack()
     const int32 SequenceIndex = CurrentComboIndex;
     const FAttackSequence* Sequence = MeleeDefinition->GetSequenceAt(SequenceIndex);
 
-    // ¼­¹ö¿¡ ÆÇÁ¤ À§ÀÓ
+    // ì„œë²„ì— íŒì • ìœ„ì„
     ServerMeleeAttack(SequenceIndex);
 
-    // ·ÎÄÃ »óÅÂ ¾÷µ¥ÀÌÆ®
+    // ë¡œì»¬ ìƒíƒœ ì—…ë°ì´íŠ¸
     bIsAttacking = true;
     bCanCancel = false;
 
@@ -144,7 +144,7 @@ void UVremMeleeComponent::ExecuteMeleeAttack()
         TimerManager.SetTimer(SwingShakeTimer, ShakeDelegate, SwingShakeFireTime, false);
     }
 
-    // ±âÁ¸ Å¸ÀÌ¸Ó Å¬¸®¾î
+    // ê¸°ì¡´ íƒ€ì´ë¨¸ í´ë¦¬ì–´
     FTimerManager& TimerManager = GetWorld()->GetTimerManager();
     TimerManager.ClearTimer(AttackDurationTimer);
     TimerManager.ClearTimer(CancelTimeTimer);
@@ -154,7 +154,7 @@ void UVremMeleeComponent::ExecuteMeleeAttack()
         Handler->OnMeleeAttackStarted(SequenceIndex);
     }
 
-    // Å¸ÀÌ¸Óµé ¼¼ÆÃ
+    // íƒ€ì´ë¨¸ë“¤ ì„¸íŒ…
     FTimerDelegate DurationDelegate;
     DurationDelegate.BindUObject(this, &UVremMeleeComponent::OnAttackDurationFinished);
     TimerManager.SetTimer(
@@ -167,7 +167,7 @@ void UVremMeleeComponent::ExecuteMeleeAttack()
         CancelTimeTimer, CancelDelegate,
         Sequence->CancelTime, false);
 
-    // ÄŞº¸ ÀÎµ¦½º Áõ°¡ (¸¶Áö¸·ÀÌ¸é ¸®¼Â)
+    // ì½¤ë³´ ì¸ë±ìŠ¤ ì¦ê°€ (ë§ˆì§€ë§‰ì´ë©´ ë¦¬ì…‹)
     CurrentComboIndex = (CurrentComboIndex + 1) % MeleeDefinition->GetComboCount();
 }
 
@@ -249,13 +249,13 @@ void UVremMeleeComponent::RestoreHitStop()
 
 void UVremMeleeComponent::ServerMeleeAttack_Implementation(int32 ComboIndex)
 {
-    // ±âÁ¸ Å¸ÀÌ¸Ó Å¬¸®¾î
+    // ê¸°ì¡´ íƒ€ì´ë¨¸ í´ë¦¬ì–´
     GetWorld()->GetTimerManager().ClearTimer(HitTimer);
 
-    // ÀÓÆÑÆ® ½ÃÁ¡¿¡ »ç¿ëÇÒ Á¤º¸ Ä³½Ã
+    // ì„íŒ©íŠ¸ ì‹œì ì— ì‚¬ìš©í•  ì •ë³´ ìºì‹œ
     LastAttackComboIndex = ComboIndex;
 
-    // HitTime ÈÄ È÷Æ® ÆÇÁ¤ ¹ßµ¿
+    // HitTime í›„ íˆíŠ¸ íŒì • ë°œë™
     const FAttackSequence* Sequence = IsValid(MeleeDefinition) ? MeleeDefinition->GetSequenceAt(ComboIndex) : nullptr;
     if (Sequence)
     {
@@ -526,7 +526,9 @@ void UVremMeleeComponent::SimulateAttackStart_ForTest()
         return;
     }
 
-    if (bIsAttacking)
+    // TryMeleeAttack() ì˜ ì°¨ë‹¨ ì¡°ê±´ê³¼ ê°™ì•„ì•¼ í•œë‹¤. bIsAttacking ë§Œ ë³´ë©´
+    // ìº”ìŠ¬ ìœˆë„ìš° ì•ˆì—ì„œ ì½¤ë³´ê°€ ì´ì–´ì§€ëŠ” ê²½ë¡œë¥¼ ëª¨ì‚¬í•  ìˆ˜ ì—†ë‹¤.
+    if (bIsAttacking && bCanCancel == false)
     {
         return;
     }

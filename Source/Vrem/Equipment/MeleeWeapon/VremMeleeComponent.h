@@ -26,12 +26,12 @@ public:
     void TryCancelMeleeAttack();
 
     UFUNCTION(BlueprintPure, Category = "Vrem|MeleeWeapon")
-    bool IsAttacking() const { return bIsAttacking; }    // AttackDuration Áß
+    bool IsAttacking() const { return bIsAttacking; }    // AttackDuration ì¤‘
     UFUNCTION(BlueprintPure, Category = "Vrem|MeleeWeapon")
-    bool CanCancel() const { return bCanCancel; } // CancelTime ~ AttackDuration »çÀÌ
+    bool CanCancel() const { return bCanCancel; } // CancelTime ~ AttackDuration ì‚¬ì´
 
 protected:
-    // ·ÎÄÃ ¿¹Ãø ½ÇÇà (Äğ´Ù¿î/ÄŞº¸ ·ÎÁ÷ Æ÷ÇÔ) ¡æ ¼­¹ö¿¡ ¿äÃ»
+    // ë¡œì»¬ ì˜ˆì¸¡ ì‹¤í–‰ (ì¿¨ë‹¤ìš´/ì½¤ë³´ ë¡œì§ í¬í•¨) â†’ ì„œë²„ì— ìš”ì²­
     void ExecuteMeleeAttack();
 
     UFUNCTION(Server, Reliable)
@@ -52,14 +52,14 @@ protected:
     void DoCancelMeleeAttack();
     void PlayMontageLocally(int32 ComboIndex);
     void CancelMontageLocally();
-    // ¼­¹ö È÷Æ® ÆÇÁ¤ (Sphere Trace)
+    // ì„œë²„ íˆíŠ¸ íŒì • (Sphere Trace)
     void PerformMeleeHitDetection(int32 ComboIndex);
 
     void PlayCameraShakeLocal(TSubclassOf<UCameraShakeBase> ShakeClass);
 
-    void OnAttackDurationFinished();  // °ø°İ ¸ğ¼Ç Á¾·á ½ÃÁ¡
-    void OnCancelTimeStarted();     // Áö±İºÎÅÍ Äµ½½ ÈÄ ´ÙÀ½ ½ÃÄı½º Àç»ı °¡´É
-    void OnHitTimeStarted();        // Áö±İ È÷Æ® ÆÇÁ¤ Ã¼Å©
+    void OnAttackDurationFinished();  // ê³µê²© ëª¨ì…˜ ì¢…ë£Œ ì‹œì 
+    void OnCancelTimeStarted();     // ì§€ê¸ˆë¶€í„° ìº”ìŠ¬ í›„ ë‹¤ìŒ ì‹œí€¸ìŠ¤ ì¬ìƒ ê°€ëŠ¥
+    void OnHitTimeStarted();        // ì§€ê¸ˆ íˆíŠ¸ íŒì • ì²´í¬
     void ApplyHitStop(AActor* Victim, float Scale, float Duration);
     void RestoreHitStop();
 
@@ -71,9 +71,9 @@ protected:
     TObjectPtr<UVremMeleeWeaponDefinition> MeleeDefinition;
 
 private:
-    int32 CurrentComboIndex = 0;           // ´ÙÀ½ ½ÇÇàÇÒ ÄŞº¸ ´Ü°è
-    bool bIsAttacking = false;              // AttackDuration ÁßÀÎ°¡
-    bool bCanCancel = false;          // Cooldown ÁßÀÎ°¡ (´ÙÀ½ ÀÔ·Â ½Ã ÄŞº¸ ÀÌ¾î°¨)
+    int32 CurrentComboIndex = 0;           // ë‹¤ìŒ ì‹¤í–‰í•  ì½¤ë³´ ë‹¨ê³„
+    bool bIsAttacking = false;              // AttackDuration ì¤‘ì¸ê°€
+    bool bCanCancel = false;          // Cooldown ì¤‘ì¸ê°€ (ë‹¤ìŒ ì…ë ¥ ì‹œ ì½¤ë³´ ì´ì–´ê°)
 
     FTimerHandle AttackDurationTimer;
     FTimerHandle CancelTimeTimer;
@@ -88,23 +88,23 @@ private:
 
 #if WITH_AUTOMATION_WORKER
 public:
-    // Definition ÁÖÀÔ
+    // Definition ì£¼ì…
     void SetMeleeDefinition_ForTest(UVremMeleeWeaponDefinition* InDef)
     {
         MeleeDefinition = InDef;
     }
 
-    // »óÅÂ Á¶È¸
+    // ìƒíƒœ ì¡°íšŒ
     int32 GetCurrentComboIndex_ForTest() const { return CurrentComboIndex; }
     bool IsAttacking_ForTest() const { return bIsAttacking; }
     bool CanCancel_ForTest() const { return bCanCancel; }
 
-    // Å¸ÀÌ¸Ó Äİ¹é ¼öµ¿ È£Ãâ
+    // íƒ€ì´ë¨¸ ì½œë°± ìˆ˜ë™ í˜¸ì¶œ
     void TriggerAttackDurationFinished_ForTest() { OnAttackDurationFinished(); }
     void TriggerCancelTimeStarted_ForTest() { OnCancelTimeStarted(); }
 
-    // Å×½ºÆ® Àü¿ë: ExecuteMeleeAttackÀÇ »óÅÂ º¯È­ ºÎºĞ¸¸ ¼öµ¿ ½Ã¹Ä·¹ÀÌ¼Ç
-    // (Controller ÀÇÁ¸ ¾øÀ½, Å¸ÀÌ¸Ó ¼³Á¤ ¾øÀ½)
+    // í…ŒìŠ¤íŠ¸ ì „ìš©: ExecuteMeleeAttackì˜ ìƒíƒœ ë³€í™” ë¶€ë¶„ë§Œ ìˆ˜ë™ ì‹œë®¬ë ˆì´ì…˜
+    // (Controller ì˜ì¡´ ì—†ìŒ, íƒ€ì´ë¨¸ ì„¤ì • ì—†ìŒ)
     void SimulateAttackStart_ForTest();
 #endif
 
