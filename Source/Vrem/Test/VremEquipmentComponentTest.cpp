@@ -27,6 +27,27 @@ namespace VremEquipmentTestHelper
         Def->HolsterSocketName = TEXT("spine_01");
         return Def;
     }
+
+    // 테스트용 Definition 에는 EquipmentActorClass 와 EquipMontage 가 없다.
+    //
+    // Occurrences = 0 은 '횟수는 상관없지만 최소 한 번은 나와야 한다'는 뜻이다.
+    void ExpectMissingAssetWarnings(FAutomationTestBase& Test, bool bExpectEquipMontage)
+    {
+        Test.AddExpectedMessagePlain(
+            TEXT("SpawnEquipmentActor: EquipmentDefinition EquipmentActorClass is not set"),
+            ELogVerbosity::Warning, EAutomationExpectedMessageFlags::Contains, 0);
+
+        Test.AddExpectedMessagePlain(
+            TEXT("AttachToSocket: EquipmentActor is invalid"),
+            ELogVerbosity::Warning, EAutomationExpectedMessageFlags::Contains, 0);
+
+        if (bExpectEquipMontage)
+        {
+            Test.AddExpectedMessagePlain(
+                TEXT("MulticastPlayEquipMontage: EquipMontage is invalid"),
+                ELogVerbosity::Warning, EAutomationExpectedMessageFlags::Contains, 0);
+        }
+    }
 }
 
 // ============================================
@@ -40,6 +61,8 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 
 bool FEquipmentTryEquipItemTest::RunTest(const FString& Parameters)
 {
+    VremEquipmentTestHelper::ExpectMissingAssetWarnings(*this, false);
+
     UWorld* World = VremTestHelper::CreateTestWorld();
     AActor* Actor = VremEquipmentTestHelper::CreateActorWithEquipment(World);
     UVremEquipmentComponent* EquipComp = Actor->FindComponentByClass<UVremEquipmentComponent>();
@@ -81,6 +104,8 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 
 bool FEquipmentTryUnequipItemTest::RunTest(const FString& Parameters)
 {
+    VremEquipmentTestHelper::ExpectMissingAssetWarnings(*this, false);
+
     UWorld* World = VremTestHelper::CreateTestWorld();
     AActor* Actor = VremEquipmentTestHelper::CreateActorWithEquipment(World);
     UVremEquipmentComponent* EquipComp = Actor->FindComponentByClass<UVremEquipmentComponent>();
@@ -117,6 +142,8 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 
 bool FEquipmentSlotQueryTest::RunTest(const FString& Parameters)
 {
+    VremEquipmentTestHelper::ExpectMissingAssetWarnings(*this, true);
+
     UWorld* World = VremTestHelper::CreateTestWorld();
     AActor* Actor = VremEquipmentTestHelper::CreateActorWithEquipment(World);
     UVremEquipmentComponent* EquipComp = Actor->FindComponentByClass<UVremEquipmentComponent>();
@@ -154,12 +181,16 @@ bool FEquipmentSlotQueryTest::RunTest(const FString& Parameters)
 // ============================================
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(
     FEquipmentSetCurrentWeaponTest,
-    "Vrem.Equipment.SetCurrentWeapon",
+    // 경로가 'Vrem.Equipment.SetCurrentWeapon' 이면 아래 HolsteredDest/Swap 등의
+    // 부모 브랜치와 이름이 겹쳐 실행 목록에서 빠진다. 리프 이름을 따로 준다.
+    "Vrem.Equipment.SetCurrentWeapon.Notifications",
     EAutomationTestFlags_ApplicationContextMask | EAutomationTestFlags::ProductFilter
 )
 
 bool FEquipmentSetCurrentWeaponTest::RunTest(const FString& Parameters)
 {
+    VremEquipmentTestHelper::ExpectMissingAssetWarnings(*this, true);
+
     UWorld* World = VremTestHelper::CreateTestWorld();
     AActor* Actor = VremEquipmentTestHelper::CreateActorWithEquipment(World);
     UVremEquipmentComponent* EquipComp = Actor->FindComponentByClass<UVremEquipmentComponent>();
@@ -210,6 +241,8 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 
 bool FEquipmentUnequipByDefinitionTest::RunTest(const FString& Parameters)
 {
+    VremEquipmentTestHelper::ExpectMissingAssetWarnings(*this, false);
+
     UWorld* World = VremTestHelper::CreateTestWorld();
     AActor* Actor = VremEquipmentTestHelper::CreateActorWithEquipment(World);
     UVremEquipmentComponent* EquipComp = Actor->FindComponentByClass<UVremEquipmentComponent>();
@@ -236,6 +269,8 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 
 bool FEquipmentReplicationSimTest::RunTest(const FString& Parameters)
 {
+    VremEquipmentTestHelper::ExpectMissingAssetWarnings(*this, true);
+
     UWorld* World = VremTestHelper::CreateTestWorld();
 
     // 서버 액터 + 컴포넌트
@@ -276,6 +311,8 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 
 bool FEquipmentSetCurrentWeaponHolsteredDestTest::RunTest(const FString& Parameters)
 {
+    VremEquipmentTestHelper::ExpectMissingAssetWarnings(*this, true);
+
     UWorld* World = VremTestHelper::CreateTestWorld();
     AActor* Actor = VremEquipmentTestHelper::CreateActorWithEquipment(World);
     UVremEquipmentComponent* EquipComp = Actor->FindComponentByClass<UVremEquipmentComponent>();
@@ -310,6 +347,8 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 
 bool FEquipmentHolsteredDemotionTest::RunTest(const FString& Parameters)
 {
+    VremEquipmentTestHelper::ExpectMissingAssetWarnings(*this, true);
+
     UWorld* World = VremTestHelper::CreateTestWorld();
     AActor* Actor = VremEquipmentTestHelper::CreateActorWithEquipment(World);
     UVremEquipmentComponent* EquipComp = Actor->FindComponentByClass<UVremEquipmentComponent>();
@@ -351,6 +390,8 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 
 bool FEquipmentSwapHolsteredToOnHandTest::RunTest(const FString& Parameters)
 {
+    VremEquipmentTestHelper::ExpectMissingAssetWarnings(*this, true);
+
     UWorld* World = VremTestHelper::CreateTestWorld();
     AActor* Actor = VremEquipmentTestHelper::CreateActorWithEquipment(World);
     UVremEquipmentComponent* EquipComp = Actor->FindComponentByClass<UVremEquipmentComponent>();
