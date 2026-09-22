@@ -145,7 +145,7 @@ void UVremWeaponComponent::RequestCancelReload()
         return;
     }
 
-    // �ڱ� Ŭ�� ��� ��Ÿ�� �ߴ�
+    // 자기 클라 즉시 몽타주 중단
     APawn* Pawn = Cast<APawn>(GetWeaponOwner());
     if (IsValid(Pawn) && Pawn->IsLocallyControlled())
     {
@@ -181,7 +181,7 @@ bool UVremWeaponComponent::CanReload() const
     }
     if (CurrentMagazineAmmo >= WeaponDefinition->MagazineSize)
     {
-        return false;   // ����
+        return false;   // 가득
     }
 
     UVremInventoryComponent* Inv = GetCharacterInventory();
@@ -191,7 +191,7 @@ bool UVremWeaponComponent::CanReload() const
     }
     if (Inv->GetAmmoCount(WeaponDefinition->RequiredAmmoType) <= 0)
     {
-        return false;   // ����ź 0
+        return false;   // 예비탄 0
     }
     return true;
 }
@@ -240,7 +240,7 @@ void UVremWeaponComponent::ExecuteFire()
 	FRotator ViewRotation;
 	Controller->GetPlayerViewPoint(ViewOrigin, ViewRotation);
 
-    // �������� ����
+    // 스프레드 적용
     const float SpreadDegrees = GetCurrentSpread();
     const FVector ShootDirection = FMath::VRandCone(
         ViewRotation.Vector(),
@@ -278,6 +278,17 @@ void UVremWeaponComponent::ExecuteFire()
 
 void UVremWeaponComponent::ServerFire_Implementation(FVector ViewOrigin, FVector ViewDirection)
 {
+    // 클라이언트의 요청을 그대로 믿지 않는다. 조작된 클라가 이 RPC 를 직접
+    // 연사하면 잔탄/재장전/발사 간격을 모두 우회할 수 있으므로 권위 측에서
+    // 재검증한다. 판정과 기한 전진이 같은 시각을 보도록 한 번만 읽는다.
+    const float Now = GetWorld()->GetTimeSeconds();
+    if (IsFireAllowedAt(Now) == false)
+    {
+        return;
+    }
+
+    AdvanceFireDeadline(Now);
+
     CurrentMagazineAmmo = FMath::Max(0, CurrentMagazineAmmo - 1);
     OnMagazineChanged.Broadcast(CurrentMagazineAmmo, GetMagazineSize());
 
@@ -292,15 +303,15 @@ void UVremWeaponComponent::MulticastOnFire_Implementation(const FWeaponFireResul
         return;
     }
 
-    const FVector MuzzleLocation = GetMuzzleLocation();  // �ִϸ��̼� �ݿ��� ���� ����
+    const FVector MuzzleLocation = GetMuzzleLocation();  // 애니메이션 반영된 실제 머즐
 
-    // 1. �߻� ����
+    // 1. 발사 사운드
     if (IsValid(WeaponDefinition->FireSound))
     {
         UGameplayStatics::PlaySoundAtLocation(this, WeaponDefinition->FireSound, MuzzleLocation);
     }
 
-    // 2. ���� �÷���
+    // 2. 머즐 플래시
     if (WeaponDefinition->MuzzleFlashEffect)
     {
         UNiagaraComponent* MuzzleFlash = UNiagaraFunctionLibrary::SpawnSystemAtLocation(
@@ -313,7 +324,7 @@ void UVremWeaponComponent::MulticastOnFire_Implementation(const FWeaponFireResul
         }
     }
 
-    // 3. Ʈ���� (��Ʈ ���ο� ������� ź���� ����)
+    // 3. 트레일 (히트 여부와 상관없이 탄도를 따라)
     if (WeaponDefinition->BulletTrailEffect)
     {
         const FVector TrailDirection = (FireResult.HitLocation - MuzzleLocation).GetSafeNormal();
@@ -331,7 +342,7 @@ void UVremWeaponComponent::MulticastOnFire_Implementation(const FWeaponFireResul
         }
     }
 
-    // 4. �ǰ� ����Ʈ
+    // 4. 피격 이펙트
     if (FireResult.bHit)
     {
         if (UNiagaraSystem* ImpactFx = WeaponDefinition->ImpactEffects.FindRef(FireResult.SurfaceType))
@@ -341,7 +352,7 @@ void UVremWeaponComponent::MulticastOnFire_Implementation(const FWeaponFireResul
         }
     }
 
-    // 5. ��Ÿ��
+    // 5. 몽타주
     APawn* WeaponOwner = Cast<APawn>(GetWeaponOwner());
     if (IsValid(WeaponOwner) && WeaponOwner->IsLocallyControlled() == false)
     {
@@ -413,7 +424,7 @@ FWeaponFireResult UVremWeaponComponent::PerformHitScan(const FVector& ViewOrigin
             DamageEvent.HitInfo = MuzzleHit;
             DamageEvent.ShotDirection = ShootDirection;
             
-            HitActor->TakeDamage(10.f, DamageEvent, GetInstigatorController(), GetOwner());
+            HitActor->TakeDamage(WeaponDefinition->BaseDamage, DamageEvent, GetInstigatorController(), GetOwner());
         }
     }
     else
@@ -433,6 +444,37 @@ FWeaponFireResult UVremWeaponComponent::PerformHitScan(const FVector& ViewOrigin
 bool UVremWeaponComponent::CanFire() const
 {
     return bIsReloading == false && bCanFire && IsValid(WeaponDefinition) && CurrentMagazineAmmo > 0;
+}
+
+bool UVremWeaponComponent::IsFireAllowedAt(float WorldTime) const
+{
+    if (bIsReloading || IsValid(WeaponDefinition) == false || CurrentMagazineAmmo <= 0)
+    {
+        return false;
+    }
+
+    if (NextAllowedFireTime < 0.f)
+    {
+        return true;   // 첫 발
+    }
+
+    // 클라의 발사 간격 타이머와 서버의 RPC 수신 시각은 네트워크 지터만큼
+    // 어긋난다. 기한을 엄격히 요구하면 정상 클라의 사격이 간헐적으로 씹히므로
+    // 간격의 25% 를 허용 오차로 둔다. 기한이 승인 때마다 간격만큼만 전진하는
+    // 구조라, 이 오차는 발사 위상만 앞당기고 발사율은 올리지 못한다.
+    const float Tolerance = WeaponDefinition->GetFireInterval() * 0.25f;
+
+    return WorldTime >= NextAllowedFireTime - Tolerance;
+}
+
+void UVremWeaponComponent::AdvanceFireDeadline(float WorldTime)
+{
+    check(IsValid(WeaponDefinition));
+
+    // 기한을 WorldTime 기준으로 다시 세운다. 한참 쉬었다가 쏜 요청이 여유를
+    // 적립하지 못하게 막으면서, 기한은 발사 간격만큼만 전진하므로 클라가 허용
+    // 오차를 매번 끝까지 써도 평균 발사율은 올라가지 않는다.
+    NextAllowedFireTime = FMath::Max(WorldTime, NextAllowedFireTime) + WeaponDefinition->GetFireInterval();
 }
 
 void UVremWeaponComponent::StartFireCooldown()
@@ -608,7 +650,7 @@ void UVremWeaponComponent::MulticastPlayReloadMontage_Implementation()
     APawn* OwnerPawn = Cast<APawn>(GetWeaponOwner());
     if (IsValid(OwnerPawn) && OwnerPawn->IsLocallyControlled())
     {
-        return;   // �ڱ� Ŭ��� RequestReload ���� �̹� ���
+        return;   // 자기 클라는 RequestReload 에서 이미 재생
     }
 
     PlayMontageLocally(WeaponDefinition->ReloadMontage);
@@ -624,7 +666,7 @@ void UVremWeaponComponent::MulticastCancelReloadMontage_Implementation()
     APawn* OwnerPawn = Cast<APawn>(GetWeaponOwner());
     if (IsValid(OwnerPawn) && OwnerPawn->IsLocallyControlled())
     {
-        return;   // �ڱ� Ŭ��� RequestCancelReload ���� �̹� �ߴ�
+        return;   // 자기 클라는 RequestCancelReload 에서 이미 중단
     }
 
     CancelMontageLocally();

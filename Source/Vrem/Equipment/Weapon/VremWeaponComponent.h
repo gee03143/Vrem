@@ -101,6 +101,17 @@ protected:
     FWeaponFireResult PerformHitScan(const FVector& ViewOrigin, const FVector& ViewDirection);
 
     bool CanFire() const;
+
+    // server only, 권위 측 사격 승인 조건.
+    // CanFire() 와 달리 bCanFire(로컬 쿨다운 타이머)를 보지 않는다 — 서버는
+    // ExecuteFire() 를 거치지 않아 그 타이머를 돌리지 않으므로, 발사 간격은
+    // NextAllowedFireTime 으로 직접 검증한다.
+    //
+    // 판정과 기한 전진은 월드 시각을 인자로 받는다. 월드 시계에서 떼어놓아야
+    // 자동화 테스트가 시간을 직접 먹여 결정론적으로 검증할 수 있다.
+    bool IsFireAllowedAt(float WorldTime) const;
+    void AdvanceFireDeadline(float WorldTime);
+
     void StartFireCooldown();
     void OnFireCooldownFinished();
 
@@ -116,11 +127,16 @@ private:
 
     float CurrentBloom = 0.f;
 
+    // server only, 권위 측이 다음 사격을 허용하는 가장 이른 월드 시각.
+    // 승인할 때마다 발사 간격만큼 전진시켜 평균 발사율을 강제한다.
+    // 음수는 '아직 승인한 사격이 없음'을 뜻한다.
+    float NextAllowedFireTime = -1.f;
+
     // Reload
 protected:
-    void ExecuteReload();          // ���� �� ����
-    void OnReloadTimerFinished();  // �Ϸ� �ݹ�
-    void CancelReloadLocal();      // ���� �� ĵ�� ����
+    void ExecuteReload();          // 권위 측 본문
+    void OnReloadTimerFinished();  // 완료 콜백
+    void CancelReloadLocal();      // 권위 측 캔슬 본문
 
     UFUNCTION(Server, Reliable)
     void ServerStartReload();
@@ -146,10 +162,10 @@ private:
     FTimerHandle ReloadTimer;
 
 protected:
-    // client only, �ִϸ��̼��� �ݿ��� �ѱ� ���� ���� ��ġ
+    // client only, 애니메이션이 반영된 총기 머즐 소켓 위치
     FVector GetMuzzleLocation() const;
 
-    // server only, �ִϸ��̼��� �ݿ����� ���� ������ ��� ���� ������
+    // server only, 애니메이션이 반영되지 않은 논리적 사격 판정 시작점
     FVector GetLogicalMuzzleLocation() const;
 
     void PlayMontageLocally(UAnimMontage* MontageToPlay);
@@ -171,18 +187,25 @@ protected:
 
 #if WITH_AUTOMATION_WORKER
 public:
-    // Definition ����
+    // Definition 주입
     void SetWeaponDefinition_ForTest(UVremWeaponDefinition* InDef)
     {
         WeaponDefinition = InDef;
     }
 
-    // ���� ��ȸ
+    // 상태 조회
     float GetCurrentBloom_ForTest() const { return CurrentBloom; }
     bool GetCanFire_ForTest() const { return bCanFire; }
     bool GetWantsToFire_ForTest() const { return bWantsToFire; }
 
-    // ���� ����
+    // 권위 측 사격 승인 (시간을 직접 먹인다)
+    bool IsFireAllowedAt_ForTest(float WorldTime) const { return IsFireAllowedAt(WorldTime); }
+    void AdvanceFireDeadline_ForTest(float WorldTime) { AdvanceFireDeadline(WorldTime); }
+    float GetNextAllowedFireTime_ForTest() const { return NextAllowedFireTime; }
+    void SetMagazineAmmo_ForTest(int32 InAmmo) { CurrentMagazineAmmo = InAmmo; }
+    void SetIsReloading_ForTest(bool bValue) { bIsReloading = bValue; }
+
+    // 상태 조작
     void AccumulateBloom_ForTest() { AccumulateBloom(); }
     void SimulateBloomRecover_ForTest(float DeltaTime);
     void StartFireCooldown_ForTest() { StartFireCooldown(); }

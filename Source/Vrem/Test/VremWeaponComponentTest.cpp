@@ -221,4 +221,235 @@ bool FWeaponSpreadCompositeTest::RunTest(const FString& Parameters)
     VremTestHelper::DestroyTestWorld(World);
     return true;
 }
+// ============================================
+// 권위 측 사격 승인 (ServerFire 재검증)
+//
+// ServerFire 는 클라가 직접 호출할 수 있는 RPC 다. 아래 테스트들은 서버가
+// 클라의 요청을 재검증한다는 계약을 고정한다.
+// ============================================
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+    FWeaponAuthorityFirstShotTest,
+    "Vrem.Weapon.Authority.FirstShot",
+    EAutomationTestFlags_ApplicationContextMask | EAutomationTestFlags::ProductFilter
+)
+
+bool FWeaponAuthorityFirstShotTest::RunTest(const FString& Parameters)
+{
+    UWorld* World = VremTestHelper::CreateTestWorld();
+    VremWeaponTestHelper::FWeaponTestContext Context = VremWeaponTestHelper::CreateTestContext(World);
+
+    Context.WeaponComp->SetMagazineAmmo_ForTest(30);
+
+    TestTrue(TEXT("Deadline starts unset (negative)"), Context.WeaponComp->GetNextAllowedFireTime_ForTest() < 0.f);
+    TestTrue(TEXT("First shot is allowed regardless of world time"), Context.WeaponComp->IsFireAllowedAt_ForTest(0.f));
+
+    VremTestHelper::DestroyTestWorld(World);
+    return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+    FWeaponAuthorityEmptyMagazineTest,
+    "Vrem.Weapon.Authority.EmptyMagazine",
+    EAutomationTestFlags_ApplicationContextMask | EAutomationTestFlags::ProductFilter
+)
+
+bool FWeaponAuthorityEmptyMagazineTest::RunTest(const FString& Parameters)
+{
+    UWorld* World = VremTestHelper::CreateTestWorld();
+    VremWeaponTestHelper::FWeaponTestContext Context = VremWeaponTestHelper::CreateTestContext(World);
+
+    Context.WeaponComp->SetMagazineAmmo_ForTest(0);
+    TestFalse(TEXT("Empty magazine is rejected on authority"), Context.WeaponComp->IsFireAllowedAt_ForTest(0.f));
+
+    Context.WeaponComp->SetMagazineAmmo_ForTest(1);
+    TestTrue(TEXT("One round left is allowed"), Context.WeaponComp->IsFireAllowedAt_ForTest(0.f));
+
+    VremTestHelper::DestroyTestWorld(World);
+    return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+    FWeaponAuthorityWhileReloadingTest,
+    "Vrem.Weapon.Authority.WhileReloading",
+    EAutomationTestFlags_ApplicationContextMask | EAutomationTestFlags::ProductFilter
+)
+
+bool FWeaponAuthorityWhileReloadingTest::RunTest(const FString& Parameters)
+{
+    UWorld* World = VremTestHelper::CreateTestWorld();
+    VremWeaponTestHelper::FWeaponTestContext Context = VremWeaponTestHelper::CreateTestContext(World);
+
+    Context.WeaponComp->SetMagazineAmmo_ForTest(30);
+    Context.WeaponComp->SetIsReloading_ForTest(true);
+
+    TestFalse(TEXT("Reloading is rejected even with ammo"), Context.WeaponComp->IsFireAllowedAt_ForTest(0.f));
+
+    Context.WeaponComp->SetIsReloading_ForTest(false);
+    TestTrue(TEXT("Allowed again once reload ends"), Context.WeaponComp->IsFireAllowedAt_ForTest(0.f));
+
+    VremTestHelper::DestroyTestWorld(World);
+    return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+    FWeaponAuthorityRateLimitTest,
+    "Vrem.Weapon.Authority.RateLimit",
+    EAutomationTestFlags_ApplicationContextMask | EAutomationTestFlags::ProductFilter
+)
+
+bool FWeaponAuthorityRateLimitTest::RunTest(const FString& Parameters)
+{
+    UWorld* World = VremTestHelper::CreateTestWorld();
+    VremWeaponTestHelper::FWeaponTestContext Context = VremWeaponTestHelper::CreateTestContext(World);
+
+    Context.WeaponComp->SetMagazineAmmo_ForTest(30);
+
+    // FireRate 600 RPM -> FireInterval 0.1s, Tolerance 25% -> 0.025s
+    const float Interval = Context.Definition->GetFireInterval();
+    const float Tolerance = Interval * 0.25f;
+    const float Epsilon = Interval * 0.01f;
+
+    // 첫 발을 t=0 에 승인
+    Context.WeaponComp->AdvanceFireDeadline_ForTest(0.f);
+    TestEqual(TEXT("Deadline advances by one interval"), Context.WeaponComp->GetNextAllowedFireTime_ForTest(), Interval);
+
+    // 허용 오차보다 더 이른 요청은 거부
+    TestFalse(TEXT("Well before the deadline is rejected"),
+        Context.WeaponComp->IsFireAllowedAt_ForTest(Interval - Tolerance - Epsilon));
+
+    // 기한 도달 시 허용
+    TestTrue(TEXT("At the deadline is allowed"),
+        Context.WeaponComp->IsFireAllowedAt_ForTest(Interval));
+
+    // 기한을 한참 넘겨도 허용
+    TestTrue(TEXT("Well past the deadline is allowed"),
+        Context.WeaponComp->IsFireAllowedAt_ForTest(Interval * 10.f));
+
+    VremTestHelper::DestroyTestWorld(World);
+    return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+    FWeaponAuthorityJitterToleranceTest,
+    "Vrem.Weapon.Authority.JitterTolerance",
+    EAutomationTestFlags_ApplicationContextMask | EAutomationTestFlags::ProductFilter
+)
+
+bool FWeaponAuthorityJitterToleranceTest::RunTest(const FString& Parameters)
+{
+    UWorld* World = VremTestHelper::CreateTestWorld();
+    VremWeaponTestHelper::FWeaponTestContext Context = VremWeaponTestHelper::CreateTestContext(World);
+
+    Context.WeaponComp->SetMagazineAmmo_ForTest(30);
+
+    const float Interval = Context.Definition->GetFireInterval();
+    const float Tolerance = Interval * 0.25f;
+    const float Epsilon = Interval * 0.01f;
+
+    Context.WeaponComp->AdvanceFireDeadline_ForTest(0.f);
+
+    // 지터로 조금 일찍 도착한 정상 클라의 요청은 받아준다
+    TestTrue(TEXT("Just inside the jitter tolerance is allowed"),
+        Context.WeaponComp->IsFireAllowedAt_ForTest(Interval - Tolerance + Epsilon));
+
+    // 허용 오차 바깥은 거부한다
+    TestFalse(TEXT("Just outside the jitter tolerance is rejected"),
+        Context.WeaponComp->IsFireAllowedAt_ForTest(Interval - Tolerance - Epsilon));
+
+    VremTestHelper::DestroyTestWorld(World);
+    return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+    FWeaponAuthorityLateShotDoesNotBankTest,
+    "Vrem.Weapon.Authority.LateShotDoesNotBank",
+    EAutomationTestFlags_ApplicationContextMask | EAutomationTestFlags::ProductFilter
+)
+
+bool FWeaponAuthorityLateShotDoesNotBankTest::RunTest(const FString& Parameters)
+{
+    UWorld* World = VremTestHelper::CreateTestWorld();
+    VremWeaponTestHelper::FWeaponTestContext Context = VremWeaponTestHelper::CreateTestContext(World);
+
+    Context.WeaponComp->SetMagazineAmmo_ForTest(30);
+
+    const float Interval = Context.Definition->GetFireInterval();
+    const float Tolerance = Interval * 0.25f;
+    const float Epsilon = Interval * 0.01f;
+
+    // 첫 발 이후 한참 쉬었다가 쏜다
+    Context.WeaponComp->AdvanceFireDeadline_ForTest(0.f);
+    const float LateTime = 5.f;
+    TestTrue(TEXT("Shot after a long idle is allowed"), Context.WeaponComp->IsFireAllowedAt_ForTest(LateTime));
+    Context.WeaponComp->AdvanceFireDeadline_ForTest(LateTime);
+
+    // 쉰 시간이 여유로 적립되지 않는다 — 기한은 LateTime 기준으로 다시 선다.
+    // Max() 없이 기한만 누적했다면 여기서 통과해 폭발적 연사가 가능해진다.
+    TestEqual(TEXT("Deadline is rebased on the late shot, not accumulated"),
+        Context.WeaponComp->GetNextAllowedFireTime_ForTest(), LateTime + Interval);
+
+    TestFalse(TEXT("Immediate follow-up shot is still rejected"),
+        Context.WeaponComp->IsFireAllowedAt_ForTest(LateTime + Interval - Tolerance - Epsilon));
+
+    TestTrue(TEXT("Follow-up shot at the new deadline is allowed"),
+        Context.WeaponComp->IsFireAllowedAt_ForTest(LateTime + Interval));
+
+    VremTestHelper::DestroyTestWorld(World);
+    return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+    FWeaponAuthorityRapidFireCheatTest,
+    "Vrem.Weapon.Authority.RapidFireCheat",
+    EAutomationTestFlags_ApplicationContextMask | EAutomationTestFlags::ProductFilter
+)
+
+bool FWeaponAuthorityRapidFireCheatTest::RunTest(const FString& Parameters)
+{
+    UWorld* World = VremTestHelper::CreateTestWorld();
+    VremWeaponTestHelper::FWeaponTestContext Context = VremWeaponTestHelper::CreateTestContext(World);
+
+    Context.WeaponComp->SetMagazineAmmo_ForTest(100);
+
+    const float Interval = Context.Definition->GetFireInterval();
+    const float Tolerance = Interval * 0.25f;
+    const float Epsilon = Interval * 0.01f;
+
+    // 허용 오차를 매번 끝까지 쓰는 클라를 재현한다.
+    // 기한이 승인마다 Interval 만큼만 전진하므로, 이 이득은 발사 수에 비례해
+    // 누적되지 않고 오차 1회분에서 멈춘다 — 그것이 이 설계의 요점이다.
+    const int32 ShotCount = 20;
+    float LastFireTime = 0.f;
+
+    TestTrue(TEXT("First cheat shot allowed"), Context.WeaponComp->IsFireAllowedAt_ForTest(0.f));
+    Context.WeaponComp->AdvanceFireDeadline_ForTest(0.f);
+
+    for (int32 Shot = 1; Shot < ShotCount; ++Shot)
+    {
+        const float Deadline = Context.WeaponComp->GetNextAllowedFireTime_ForTest();
+        const float EarliestAccepted = Deadline - Tolerance + Epsilon;
+
+        if (Context.WeaponComp->IsFireAllowedAt_ForTest(EarliestAccepted) == false)
+        {
+            AddError(FString::Printf(TEXT("Shot %d should be accepted at %f (deadline %f)"), Shot, EarliestAccepted, Deadline));
+            break;
+        }
+
+        Context.WeaponComp->AdvanceFireDeadline_ForTest(EarliestAccepted);
+        LastFireTime = EarliestAccepted;
+    }
+
+    // 정상 발사율이라면 마지막 발은 (ShotCount - 1) * Interval 에 나간다.
+    const float HonestLastFireTime = (ShotCount - 1) * Interval;
+    const float TimeGained = HonestLastFireTime - LastFireTime;
+
+    TestTrue(
+        FString::Printf(TEXT("Cheat gain stays within one tolerance step, not proportional to shot count (gained %f, tolerance %f)"), TimeGained, Tolerance),
+        TimeGained <= Tolerance + Epsilon * 2.f);
+
+    VremTestHelper::DestroyTestWorld(World);
+    return true;
+}
+
 #endif // WITH_AUTOMATION_WORKER
